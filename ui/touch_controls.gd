@@ -16,18 +16,24 @@ const MAX_DRAG := 90.0
 
 @onready var left_knob: Control = $Left/Knob
 @onready var right_knob: Control = $Right/Knob
+@onready var dash_btn: Button = $Right/Dash
+@onready var rewind_btn: Button = $Right/Rewind
 var _left_home := Vector2.ZERO
 var _right_home := Vector2.ZERO
+var _ui_touches := {} # touch index -> action ("dash"/"rewind")
 
 func _ready() -> void:
 	add_to_group("touch")
 	visible = DisplayServer.is_touchscreen_available() or OS.has_feature("android") or OS.has_feature("ios")
 	_left_home = left_knob.position
 	_right_home = right_knob.position
-	$Right/Dash.pressed.connect(func(): Input.action_press("dash"))
-	$Right/Dash.button_up.connect(func(): Input.action_release("dash"))
-	$Right/Rewind.pressed.connect(func(): Input.action_press("rewind"))
-	$Right/Rewind.button_up.connect(func(): Input.action_release("rewind"))
+
+func _ui_action_at(pos: Vector2) -> String:
+	if dash_btn.get_global_rect().grow(12.0).has_point(pos):
+		return "dash"
+	if rewind_btn.get_global_rect().grow(12.0).has_point(pos):
+		return "rewind"
+	return ""
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
@@ -35,7 +41,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var vp := get_viewport().get_visible_rect().size
 		if event.pressed:
-			if event.position.x < vp.x * 0.4 and _move_touch < 0:
+			var ui := _ui_action_at(event.position)
+			if ui != "":
+				_ui_touches[event.index] = ui
+				Input.action_press(ui)
+			elif event.position.x < vp.x * 0.4 and _move_touch < 0:
 				_move_touch = event.index
 				_move_origin = event.position
 				move_vec = Vector2.ZERO
@@ -46,6 +56,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				aim_active = true
 				aim_vec = Vector2.ZERO
 		else:
+			if event.index in _ui_touches:
+				Input.action_release(_ui_touches[event.index])
+				_ui_touches.erase(event.index)
 			if event.index == _move_touch:
 				_move_touch = -1
 				move_vec = Vector2.ZERO

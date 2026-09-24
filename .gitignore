@@ -1,7 +1,6 @@
 # Godot
 .godot/
 *.godot.uid
-export_presets.cfg
 exports/
 .android/
 .ios/

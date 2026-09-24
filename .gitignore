@@ -1,0 +1,30 @@
+# Godot
+.godot/
+*.godot.uid
+export_presets.cfg
+exports/
+.android/
+.ios/
+
+# Builds
+build/
+dist/
+*.apk
+*.aab
+*.exe
+*.x86_64
+*.zip
+
+# Saves locales de prueba
+saves/*.json
+!saves/.gitkeep
+
+# Python tools
+__pycache__/
+.venv/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+*~

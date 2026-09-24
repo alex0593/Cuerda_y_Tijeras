@@ -1,0 +1,49 @@
+[gd_scene load_steps=2 format=3 uid="uid://hud_vs1"]
+
+[ext_resource type="Script" path="res://ui/hud.gd" id="1"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1")
+
+[node name="Top" type="HBoxContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 64.0
+alignment = 0
+
+[node name="Left" type="VBoxContainer" parent="Top"]
+custom_minimum_size = Vector2(300, 0)
+
+[node name="Life" type="ProgressBar" parent="Top/Left"]
+custom_minimum_size = Vector2(260, 18)
+max_value = 3.0
+value = 3.0
+show_percentage = false
+
+[node name="Tension" type="ProgressBar" parent="Top/Left"]
+custom_minimum_size = Vector2(260, 14)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="Rewind" type="Label" parent="Top/Left"]
+text = "⟲ x2"
+
+[node name="Right" type="VBoxContainer" parent="Top"]
+size_flags_horizontal = 3
+
+[node name="Info" type="Label" parent="Top/Right"]
+horizontal_alignment = 2
+text = "Sala 0"
+
+[node name="Toast" type="Label" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = -40.0
+horizontal_alignment = 1

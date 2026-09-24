@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "items": {
+    "scissors_basic": {"name": "Tijeras de taller", "slot": "weapon", "tags": ["cut"], "tension_cost": 4, "damage": 8, "fire_interval": 0.30, "projectile_speed": 420},
+    "scissors_precision": {"name": "Tijeras de precisión", "slot": "weapon", "tags": ["cut", "precision"], "tension_cost": 4, "damage": 10, "fire_interval": 0.28, "projectile_speed": 460},
+    "spring_jumper": {"name": "Resorte saltador", "slot": "mechanism", "tags": ["movement", "spring"], "tension_cost": 2, "dash_bonus": 40},
+    "iron_magnet": {"name": "Imán de hierro", "slot": "mechanism", "tags": ["magnet", "metal"], "tension_cost": 0, "pickup_radius": 96},
+    "music_box": {"name": "Caja de música", "slot": "amulet", "tags": ["music"], "tension_cost": 1, "orbit_damage": 8, "orbit_time": 3.0},
+    "glass_eye": {"name": "Ojo de vidrio", "slot": "amulet", "tags": ["light", "reveal"], "tension_cost": 0, "crit_bonus": 0.15},
+    "taut_thread": {"name": "Hilo tensado", "slot": "amulet", "tags": ["thread"], "tension_cost": 1, "bind_time": 0.8},
+    "screws_cork": {"name": "Tornillos y corcho", "slot": "mechanism", "tags": ["bounce"], "tension_cost": 0, "bounces": 1},
+    "toy_glue": {"name": "Pegamento de juguete", "slot": "amulet", "tags": ["glue"], "tension_cost": 0, "stick_time": 3.0},
+    "repair_coil": {"name": "Bobina de reparación", "slot": "consumable", "tags": ["heal"], "tension_cost": 0, "heal": 1.0, "charges": 1}
+  },
+  "synergies": {
+    "impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso"},
+    "living_stitches": {"needs": ["scissors_precision", "taut_thread"], "name": "Puntadas vivas"},
+    "magnet_recovery": {"needs": ["iron_magnet", "screws_cork"], "name": "Recuperación magnética"},
+    "clock_rhythm": {"needs": ["music_box", "spring_jumper"], "name": "Ritmo de reloj"},
+    "trapped_notes": {"needs": ["music_box", "taut_thread"], "name": "Notas atrapadas"},
+    "adhesive_orbit": {"needs": ["toy_glue", "screws_cork"], "name": "Órbita adhesiva"},
+    "impulse_repair": {"needs": ["spring_jumper", "repair_coil"], "name": "Reparación con impulso"},
+    "loaded_melody": {"needs": ["iron_magnet", "music_box"], "name": "Melodía cargada"}
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "enemies": {
+    "tin_soldier": {"name": "Soldado de estaño", "cost": 1, "hp": 24, "threat": "carga frontal", "weakness": "dash / espalda / corte"},
+    "music_box": {"name": "Caja de música", "cost": 2, "hp": 30, "threat": "proyectiles rítmicos", "weakness": "núcleo / silenciar"},
+    "caja_cero": {"name": "La Caja de Cero", "cost": 6, "hp": 120, "phases": 2, "threat": "abanico + hilos", "weakness": "llave central"}
+  }
+}

@@ -29,7 +29,7 @@ func _ready() -> void:
 	$Right/Rewind.pressed.connect(func(): Input.action_press("rewind"))
 	$Right/Rewind.button_up.connect(func(): Input.action_release("rewind"))
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event is InputEventScreenTouch:
@@ -39,12 +39,12 @@ func _input(event: InputEvent) -> void:
 				_move_touch = event.index
 				_move_origin = event.position
 				move_vec = Vector2.ZERO
-			elif _aim_touch < 0:
+			elif event.position.x >= vp.x * 0.4 and _aim_touch < 0:
+				# Tocar no dispara: solo el arrastre más allá de la zona muerta.
 				_aim_touch = event.index
 				_aim_origin = event.position
 				aim_active = true
 				aim_vec = Vector2.ZERO
-				Input.action_press("fire")
 		else:
 			if event.index == _move_touch:
 				_move_touch = -1
@@ -54,7 +54,6 @@ func _input(event: InputEvent) -> void:
 				_aim_touch = -1
 				aim_active = false
 				aim_vec = Vector2.ZERO
-				Input.action_release("fire")
 				right_knob.position = _right_home
 	elif event is InputEventScreenDrag:
 		if event.index == _move_touch:

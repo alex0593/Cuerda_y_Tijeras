@@ -3,6 +3,7 @@ extends "res://gameplay/enemies/base_enemy.gd"
 
 var _state := "chase"
 var _timer := 0.0
+@onready var telegraph: Line2D = $Telegraph
 
 func _ready() -> void:
 	super._ready()
@@ -19,18 +20,22 @@ func _tick(delta: float) -> void:
 	_timer -= delta
 	match _state:
 		"chase":
+			telegraph.visible = false
 			velocity = to.normalized() * move_speed
 			if to.length() < 180.0 and _timer <= 0.0:
 				_state = "telegraph"
 				_timer = 0.5 # aviso legible (doc 04)
 				velocity = Vector2.ZERO
 		"telegraph":
+			telegraph.visible = true
+			telegraph.rotation = to.angle()
 			velocity = Vector2.ZERO
 			modulate = Color(1, 0.85, 0.3)
 			if _timer <= 0.0:
 				_state = "charge"
 				_timer = 0.45
 		"charge":
+			telegraph.visible = false
 			velocity = to.normalized() * 260.0
 			if _timer <= 0.0:
 				_state = "chase"

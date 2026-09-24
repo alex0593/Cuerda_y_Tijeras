@@ -33,6 +33,10 @@ var damage := 10.0
 
 func _ready() -> void:
 	add_to_group("player")
+	GameState.item_added.connect(_on_item_added)
+	_apply_items()
+
+func _on_item_added(_item_id: String) -> void:
 	_apply_items()
 
 func _apply_items() -> void:

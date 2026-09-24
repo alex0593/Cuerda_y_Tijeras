@@ -19,3 +19,10 @@ shape = SubResource("col")
 [node name="Body" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(-14, 14, -10, -14, 10, -14, 14, 14)
 color = Color(0.3, 0.32, 0.35, 1)
+
+[node name="Telegraph" type="Line2D" parent="."]
+visible = false
+z_index = 2
+points = PackedVector2Array(0, 0, 0, 100)
+width = 4.0
+default_color = Color(1, 0.75, 0.2, 0.75)

@@ -25,12 +25,15 @@ func _start_new_run(p_seed: int) -> void:
 	flow = RoomGenerator.generate_run(p_seed)
 	room_index = 0
 	($End as CanvasLayer).visible = false
+	$PauseOverlay.visible = false
 	_spawn_current()
 
 func _spawn_current() -> void:
 	if is_instance_valid(current_room):
 		if current_room.cleared.is_connected(_on_room_cleared):
 			current_room.cleared.disconnect(_on_room_cleared)
+		if current_room.exit_reached.is_connected(_on_room_exit):
+			current_room.exit_reached.disconnect(_on_room_exit)
 		current_room.free()
 	_transitioning = false
 	var data: Dictionary = (flow["rooms"] as Array)[room_index]
@@ -38,6 +41,7 @@ func _spawn_current() -> void:
 	# Configurar y conectar antes de add_child: _ready() se ejecuta al entrar al árbol.
 	room.setup(data)
 	room.cleared.connect(_on_room_cleared)
+	room.exit_reached.connect(_on_room_exit)
 	current_room = room
 	add_child(room)
 	move_child(room, 0)
@@ -60,10 +64,30 @@ func _drop_reward(pos: Vector2, kind: String) -> void:
 func _on_room_cleared() -> void:
 	if not GameState.is_running or _transitioning:
 		return
-	_transitioning = true
-	var serial := _run_serial
 	GameState.rooms_visited += 1
 	SaveService.save_run()
+	if _room_requires_exit():
+		# Las salas de combate esperan a que la jugadora llegue a la puerta.
+		return
+	_advance_to_next_room()
+
+func _on_room_exit() -> void:
+	if not GameState.is_running or _transitioning:
+		return
+	_advance_to_next_room()
+
+func _room_requires_exit() -> bool:
+	if not is_instance_valid(current_room):
+		return false
+	var kind := String(current_room.kind)
+	var reward := String(current_room.room_data.get("reward", ""))
+	return kind in ["combat", "risk", "boss"] or reward != ""
+
+func _advance_to_next_room() -> void:
+	if _transitioning:
+		return
+	_transitioning = true
+	var serial := _run_serial
 	await get_tree().create_timer(0.8).timeout
 	if serial != _run_serial or not GameState.is_running:
 		_transitioning = false
@@ -77,6 +101,7 @@ func _on_room_cleared() -> void:
 
 func _on_run_ended(victory: bool) -> void:
 	get_tree().paused = true
+	$PauseOverlay.visible = false
 	SaveService.profile.runs = int(SaveService.profile.get("runs", 0)) + 1
 	if victory:
 		var best := float(SaveService.profile.get("best_time", 0.0))
@@ -96,3 +121,4 @@ func _process(_delta: float) -> void:
 		return
 	if Input.is_action_just_pressed("pause") and not ($End as CanvasLayer).visible:
 		get_tree().paused = not get_tree().paused
+		$PauseOverlay.visible = get_tree().paused

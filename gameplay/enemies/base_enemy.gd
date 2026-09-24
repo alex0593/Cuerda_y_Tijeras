@@ -9,12 +9,15 @@ class_name BaseEnemy
 
 var hp := 20.0
 var weak_point_exposed := false
+var drop_rng_seed := 0
+var _drop_rng := RandomNumberGenerator.new()
 var _bind_left := 0.0
 var _flash := 0.0
 var _telegraph := 0.0
 
 func _ready() -> void:
 	add_to_group("enemy")
+	_drop_rng.seed = drop_rng_seed
 	hp = max_hp
 
 func _physics_process(delta: float) -> void:
@@ -52,7 +55,7 @@ func die() -> void:
 	queue_free()
 
 func _drop() -> void:
-	var roll := randf()
+	var roll := _drop_rng.randf()
 	if roll < 0.25:
 		var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
 		get_parent().add_child(pk)

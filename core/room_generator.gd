@@ -20,6 +20,12 @@ func generate_run(p_seed: int) -> Dictionary:
 	for i in VERTICAL_SLICE_FLOW.size():
 		var kind: String = VERTICAL_SLICE_FLOW[i]
 		rooms.append(_make_room(rng, i, kind))
+	for i in rooms.size():
+		var room: Dictionary = rooms[i]
+		room["connections"] = [i + 1] if i < rooms.size() - 1 else []
+		room["entry_safe"] = true
+		room["exit_position"] = Vector2(920, 270)
+		rooms[i] = room
 	return {"seed": p_seed, "version": GENERATOR_VERSION, "rooms": rooms}
 
 func _make_room(rng: RandomNumberGenerator, index: int, kind: String) -> Dictionary:
@@ -57,18 +63,30 @@ func _pick_enemies(rng: RandomNumberGenerator, budget: int) -> Array:
 		guard += 1
 		var e: String = pool[rng.randi_range(0, pool.size() - 1)]
 		var cost: int = ENEMY_COST.get(e, 1)
-		if spent + cost <= budget + 1:
+		if spent + cost <= budget:
 			out.append(e)
 			spent += cost
 	if out.is_empty():
 		out.append("tin_soldier")
 	return out
 
+func enemy_budget(room: Dictionary) -> int:
+	var total := 0
+	for enemy_id in (room.get("enemies", []) as Array):
+		total += int(ENEMY_COST.get(enemy_id, 1))
+	return total
+
 func validate_room(room: Dictionary) -> Array[String]:
 	var errors: Array[String] = []
-	if not room.has("kind") or not room.has("enemies"):
-		errors.append("room missing kind/enemies")
+	if not room.has("kind") or not room.has("enemies") or not room.has("template"):
+		errors.append("room missing kind/template/enemies")
 	# Regla doc 07: la entrada es segura, sin proyectil inicial sin aviso.
-	if room.get("kind") == "start" and not (room.get("enemies") as Array).is_empty():
+	if room.get("kind") == "start" and not (room.get("enemies", []) as Array).is_empty():
 		errors.append("start room must have no enemies")
+	if not room.has("seed") or not room.has("connections"):
+		errors.append("room missing seed/connections")
+	if room.get("kind") == "combat" and enemy_budget(room) > 2:
+		errors.append("combat room exceeds difficulty budget")
+	if room.get("kind") == "risk" and enemy_budget(room) > 3:
+		errors.append("risk room exceeds difficulty budget")
 	return errors

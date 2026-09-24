@@ -20,3 +20,10 @@ color = Color(0.5, 0.35, 0.2, 1)
 [node name="Core" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)
 color = Color(0.79, 0.64, 0.15, 1)
+
+[node name="Telegraph" type="Line2D" parent="."]
+visible = false
+z_index = 2
+points = PackedVector2Array(24, 0, 17, 17, 0, 24, -17, 17, -24, 0, -17, -17, 0, -24, 17, -17, 24, 0)
+width = 3.0
+default_color = Color(0.79, 0.64, 0.15, 0.75)

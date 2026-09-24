@@ -22,7 +22,7 @@ const MAX_DRAG := 90.0
 @onready var restart_btn: Button = $Restart
 var _left_home := Vector2.ZERO
 var _right_home := Vector2.ZERO
-var _ui_touches := {} # touch index -> action ("dash"/"rewind")
+var _ui_touches := {} # touch index -> action (dash/rewind/pause/restart)
 
 func _ready() -> void:
 	add_to_group("touch")

@@ -78,12 +78,23 @@ func start_run(p_seed: int = 0) -> void:
 	rewind_charges_changed.emit(rewind_charges)
 
 func try_consume_tension(amount: float) -> bool:
-	if tension <= 0.0:
+	if amount <= 0.0 or tension < amount:
 		return false
 	tension = maxf(0.0, tension - amount)
 	_regen_cooldown = TENSION_REGEN_DELAY
 	tension_changed.emit(tension)
 	return true
+
+# Devuelve 0 si no hay tensión, 0.5 para un dash reducido y 1 para uno completo.
+func try_consume_dash(required_cost: float) -> float:
+	if required_cost <= 0.0 or tension <= 0.0:
+		return 0.0
+	var full := tension >= required_cost
+	var cost := minf(required_cost, tension)
+	tension = maxf(0.0, tension - cost)
+	_regen_cooldown = TENSION_REGEN_DELAY
+	tension_changed.emit(tension)
+	return 1.0 if full else 0.5
 
 func tension_factor() -> float:
 	# A 0 de tensión: ralentizar y debilitar, sin bloquear (doc 02).
@@ -115,6 +126,8 @@ func try_consume_rewind() -> bool:
 		return false
 	rewind_charges -= 1
 	rewind_charges_changed.emit(rewind_charges)
+	# Rebobinado es una ventana de escape: evita recibir daño durante la reversión.
+	_invuln_time = maxf(_invuln_time, REWIND_DURATION)
 	if _rewind_cooldown <= 0.0:
 		_rewind_cooldown = REWIND_RECHARGE_TIME
 	return true
@@ -133,6 +146,35 @@ func _check_synergies(new_item: String) -> void:
 			synergies.append(s)
 			synergy_formed.emit(s)
 
+func restore_run(data: Dictionary) -> void:
+	start_run(int(data.get("seed", 0)))
+	generator_version = int(data.get("generator_version", generator_version))
+	tension = clampf(float(data.get("tension", TENSION_MAX)), 0.0, TENSION_MAX)
+	life = clampf(float(data.get("life", LIFE_MAX)), 0.0, LIFE_MAX)
+	rewind_charges = clampi(int(data.get("rewind_charges", REWIND_MAX_CHARGES)), 0, REWIND_MAX_CHARGES)
+	run_time = maxf(0.0, float(data.get("run_time", 0.0)))
+	rooms_visited = maxi(0, int(data.get("rooms_visited", 0)))
+	kills = maxi(0, int(data.get("kills", 0)))
+	items = ["scissors_basic"]
+	var saved_items: Array = data.get("items", [])
+	for item_id in saved_items:
+		var id := String(item_id)
+		if id in items or SynergyDB.get_item(id).is_empty():
+			continue
+		items.append(id)
+	synergies = []
+	var saved_synergies: Array = data.get("synergies", [])
+	for synergy_id in saved_synergies:
+		var sid := String(synergy_id)
+		if SynergyDB.SYNERGIES.has(sid) and not sid in synergies:
+			synergies.append(sid)
+	cause_of_death = String(data.get("cause_of_death", ""))
+	tension_changed.emit(tension)
+	life_changed.emit(life)
+	rewind_charges_changed.emit(rewind_charges)
+
 func end_run(victory: bool) -> void:
+	if not is_running:
+		return
 	is_running = false
 	run_ended.emit(victory)

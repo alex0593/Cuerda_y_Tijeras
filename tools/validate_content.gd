@@ -21,6 +21,8 @@ func _init() -> void:
 	if not "impulse_scissors" in formed:
 		push_error("falta sinergia impulse_scissors")
 		err += 1
+	syn.free()
+	gen.free()
 	if err == 0:
 		print("VALIDATE_OK: sinergias + generación")
 	quit(err)

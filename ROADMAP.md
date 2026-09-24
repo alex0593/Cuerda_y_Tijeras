@@ -1,39 +1,68 @@
-# ROADMAP — Vertical slice 5–10 min (primera versión jugable)
-# Motor: Godot 4.x + GDScript. Plataforma inicial Android (horizontal), validación en escritorio.
+# ROADMAP — Cuerda y Tijeras
 
-## H0 — Repo y prueba técnica [HECHO parcial]
-- [x] Git init, `project.godot` 960x540, input `move/aim/fire/dash/rewind/use_item/pause`
-- [x] Autoloads: GameState, SaveService, SynergyDB, RoomGenerator, PlatformService
-- [x] Lela: mover, dash i-frames, tensión, rebobinado reversible, consumible
-- [ ] Verificar en Godot: `--headless --import` + abrir `gameplay/main/game.tscn` en editor
-- [ ] Export escritorio Linux desde editor y jugar con WASD+ratón/espacio/Q
+Motor: **Godot 4.7.2 + GDScript**. Android horizontal es la plataforma inicial; Linux escritorio valida portabilidad. La base actual es un **vertical slice en estabilización**, no una versión comercial.
 
-## H1 — Sala y primer enemigo
-- [x] `room.tscn` 880x460, muros, entrada segura izquierda, spawn por presupuesto
-- [x] Soldado de estaño (persigue/avisa/carga) + Caja de música (anillo 8 notas)
-- [ ] Playtest: entrada sin sorpresas, aviso legible, sin objeto obligatorio
-- [ ] Ajustar `move_speed`, `dash_cooldown`, costes en `core/` + `content/*.json`
+## H0 — Baseline y prueba técnica
 
-## H2 — Objetos y sinergias (8+1, 6–10)
-- [x] Datos en `SynergyDB` + `content/items.json`: tijeras_precisión, resorte, imán, caja_música, ojo, hilo, tornillos, pegamento, bobina
-- [x] Pickup con imán, hilo que ata, rebotes, retorno magnético, crítico ojo
-- [ ] Implementar órbitas reales (notas) y trampas adhesivas — hoy solo flags/daño parcial
-- [ ] Playtest: cada objeto útil solo; 6–10 sinergias forman tarjeta sin bloquear
+- [x] Proyecto Godot portable, viewport 960×540, orientación sensor-landscape.
+- [x] Migración de Godot 4.3 a 4.7.2 y plantillas de exportación 4.7.2 instaladas.
+- [x] Autoloads separados: `GameState`, `SaveService`, `SynergyDB`, `RoomGenerator`, `PlatformService`.
+- [x] Lela con movimiento, dash con frames de invulnerabilidad, tensión, disparo y rebobinado básico.
+- [x] Guardado local versionado con backup y restauración de estado básica.
+- [x] Smoke test real: la sala inicial avanza a `combat` con jugador y enemigos.
+- [x] Test de reglas real para tensión, dash, daño, rebobinado, semilla y guardado.
+- [x] Exportación Linux y APK Android debug generadas con Godot 4.7.2.
+- [ ] Playtest H0 en Android 4.7.2: movement, dash, rewind, touch buttons, pause/restart y orientación.
+- [ ] Confirmar la decisión D-001 después del playtest de hardware.
 
-## H3 — Jefe, flujo y cierre slice
-- [x] Caja de Cero 2 fases (abanico; abanico+hilos), sala boss_arena
-- [x] Flujo `start→combat→treasure→risk→workshop→boss`, recompensas, resumen con semilla, R reintenta
-- [x] Guardado versionado `profile/settings/partida-a.v1.json` + `.bak`, export semilla
-- [ ] Audio provisional (buses música/efectos), HUD final, pausa confirmada, iconos tienda no
-- [ ] Export Android (debug) en dispositivo real + matriz mínima doc 12
+### Comandos H0
 
-## Comandos
 ```sh
-/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --headless --import --path .
-/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --headless --check-only --script tools/validate_content.gd --path .
+GODOT=/tmp/opencode/godot-4.7.2-bin/Godot_v4.7.2-stable_linux.x86_64
+$GODOT --headless --import --path .
+$GODOT --headless --script tests/test_rules.gd --path .
+$GODOT --headless --script tests/test_h0_flow.gd --path .
+$GODOT --headless --script tools/validate_content.gd --path .
 python3 tools/validate_content.py
-/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --path . gameplay/main/game.tscn
+
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export JAVA_HOME="$HOME/.local/share/minecrack/runtimes/java-21"
+$GODOT --headless --export-debug "Linux Desktop" exports/cuerda-y-tijeras-linux.x86_64 --path .
+$GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --path .
 ```
 
-## Criterio de salida (doc 10 Fase 1)
-Controles <30s, tensión <1min, rebobinado útil sin trivializar, 3 objetos con estrategias distintas, partida 5–10min, arte provisional legible, Android+escritorio, ganas de repetir.
+## H1 — Núcleo jugable y salas
+
+- [ ] Completar una sala de combate con entrada segura, cobertura, puertas y salida real.
+- [ ] Hacer que Soldado de estaño y Caja de música tengan aviso, colisiones y recompensa verificables.
+- [ ] Corregir el presupuesto de enemigos y la generación reproducible.
+- [ ] Implementar pausa/reanudación y reinicio Android/escritorio sin softlock.
+- [ ] Probar una partida completa de principio a jefe.
+
+## H2 — Objetos e inventario
+
+- [ ] Convertir `content/*.json` en la única fuente de datos runtime.
+- [ ] Implementar slots, consumibles, rarezas y restricciones.
+- [ ] Hacer que cada objeto sea útil individualmente.
+- [ ] Implementar seis sinergias con efecto real; eliminar flags que solo muestran texto.
+- [ ] Resolver las advertencias de más de dos relaciones (`spring_jumper` y `music_box`).
+
+## H3 — Vertical slice 5–10 minutos
+
+- [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
+- [ ] Caja de Cero con dos fases funcionales y contraestrategias.
+- [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.
+- [ ] Audio provisional, arte modular provisional y feedback audiovisual.
+- [ ] Tutorial contextual, accesibilidad básica y controles de consumible.
+
+## H4 — Calidad y publicación
+
+- [ ] Playtests con personas y bitácora por dispositivo/semilla.
+- [ ] Matriz Android real: gama baja/media, pantalla alargada, tablet y safe areas.
+- [ ] Rendimiento, suspensión/reanudación, audio, guardado y compilación de distribución.
+- [ ] APK/AAB release, firma, licencias, privacidad y clasificación por edad.
+
+## Regla de avance
+
+No marcar una fase como completada por tener escenas o datos: hace falta que sus pruebas automatizadas y el playtest de hardware correspondiente pasen. El diseño completo está en `documentacion/`; el estado ejecutable se demuestra con los tests y exports de este roadmap.

@@ -63,10 +63,13 @@ func save_run() -> bool:
 		"seed": GameState.seed_value,
 		"tension": GameState.tension,
 		"life": GameState.life,
+		"rewind_charges": GameState.rewind_charges,
 		"items": GameState.items,
 		"synergies": GameState.synergies,
 		"rooms_visited": GameState.rooms_visited,
+		"kills": GameState.kills,
 		"run_time": GameState.run_time,
+		"cause_of_death": GameState.cause_of_death,
 	}
 	# Copia antes de migrar/sobrescribir (doc 09).
 	if FileAccess.file_exists(RUN_PATH):
@@ -84,34 +87,42 @@ func save_run() -> bool:
 func load_run() -> bool:
 	if not FileAccess.file_exists(RUN_PATH):
 		return false
-	var f := FileAccess.open(RUN_PATH, FileAccess.READ)
-	if f == null:
-		return false
-	var parsed = JSON.parse_string(f.get_as_text())
-	if not (parsed is Dictionary):
+	var parsed := _read_run_file(RUN_PATH)
+	if not _valid_run_data(parsed):
 		return _try_restore_backup()
-	if int(parsed.get("version", 0)) != FORMAT_VERSION:
-		return _try_restore_backup()
-	GameState.start_run(int(parsed.get("seed", 0)))
-	GameState.tension = float(parsed.get("tension", 100.0))
-	GameState.life = float(parsed.get("life", 3.0))
-	GameState.items.assign(parsed.get("items", ["scissors_basic"]))
-	GameState.synergies.assign(parsed.get("synergies", []))
-	GameState.rooms_visited = int(parsed.get("rooms_visited", 0))
-	GameState.run_time = float(parsed.get("run_time", 0.0))
+	GameState.restore_run(parsed)
 	return true
 
+func has_run() -> bool:
+	return FileAccess.file_exists(RUN_PATH)
+
+func _read_run_file(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var parsed = JSON.parse_string(f.get_as_text())
+	return parsed if parsed is Dictionary else {}
+
+func _valid_run_data(data: Dictionary) -> bool:
+	return (
+		not data.is_empty()
+		and int(data.get("version", 0)) == FORMAT_VERSION
+		and int(data.get("generator_version", 0)) > 0
+		and data.get("items", []) is Array
+		and data.get("synergies", []) is Array
+	)
+
 func _try_restore_backup() -> bool:
-	if FileAccess.file_exists(RUN_PATH + ".bak"):
-		var f := FileAccess.open(RUN_PATH + ".bak", FileAccess.READ)
-		if f:
-			var parsed = JSON.parse_string(f.get_as_text())
-			if parsed is Dictionary and int(parsed.get("version", 0)) == FORMAT_VERSION:
-				return load_run_backup(parsed)
-	return false
+	var parsed := _read_run_file(RUN_PATH + ".bak")
+	if not _valid_run_data(parsed):
+		return false
+	GameState.restore_run(parsed)
+	return true
 
 func load_run_backup(parsed: Dictionary) -> bool:
-	GameState.start_run(int(parsed.get("seed", 0)))
+	if not _valid_run_data(parsed):
+		return false
+	GameState.restore_run(parsed)
 	return true
 
 func export_seed() -> String:

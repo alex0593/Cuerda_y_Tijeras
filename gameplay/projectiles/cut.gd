@@ -7,13 +7,14 @@ var damage := 10.0
 var bounces_left := 0
 var life := 1.2
 var from := "player"
+var _history: Array[Vector2] = []
 
 func setup(p_dir: Vector2, p_speed: float, p_damage: float, p_from: String) -> void:
 	dir = p_dir.normalized()
 	speed = p_speed
 	damage = p_damage
 	from = p_from
-	if "screws_cork" in GameState.items:
+	if p_from == "player" and "screws_cork" in GameState.items:
 		bounces_left = 1
 	rotation = dir.angle()
 
@@ -35,9 +36,13 @@ func _physics_process(delta: float) -> void:
 		if p:
 			dir = (p.global_position - global_position).normalized()
 			rotation = dir.angle()
+	_history.append(global_position)
+	var max_samples := maxi(1, int(GameState.REWIND_DURATION * 60.0))
+	while _history.size() > max_samples:
+		_history.pop_front()
 	position += dir * speed * delta
 
-func _on_body(body: Node) -> void:
+func _on_body(body: Node, normal: Vector2 = Vector2.ZERO) -> void:
 	if from == "player" and body.is_in_group("enemy") and body.has_method("take_hit"):
 		var mult := 1.0
 		if "glass_eye" in GameState.items and body.get("weak_point_exposed"):
@@ -49,7 +54,8 @@ func _on_body(body: Node) -> void:
 	elif from == "player" and body is StaticBody2D:
 		if bounces_left > 0:
 			bounces_left -= 1
-			dir = dir.bounce(Vector2.UP)
+			var bounce_normal := normal if normal.length_squared() > 0.001 else Vector2.UP
+			dir = dir.bounce(bounce_normal).normalized()
 			rotation = dir.angle()
 			life = 0.6
 		else:
@@ -61,6 +67,10 @@ func _on_body(body: Node) -> void:
 func _on_area(_a: Area2D) -> void:
 	pass
 
-func rewind_step(_history: Array) -> void:
-	# Rebobinado revierte proyectiles reversibles unos pasos (doc 02).
-	position -= dir * speed * 0.12
+func rewind_step(duration: float) -> void:
+	if _history.is_empty():
+		return
+	var sample_count := maxi(1, int(duration * 60.0))
+	var target_index := maxi(0, _history.size() - sample_count)
+	global_position = _history[target_index]
+	_history.clear()

@@ -13,13 +13,17 @@ signal rewound
 
 const SHOT_COST := 4.0
 const DASH_COST := 12.0
+const REWIND_VISUAL_TIME := 0.25
 
 var aim_dir := Vector2.RIGHT
 var _dash_left := 0.0
 var _dash_cd := 0.0
 var _fire_cd := 0.0
 var _rewind_active := 0.0
-var _history: Array = [] # [{pos, vel}] últimos ~2s a 60Hz
+var _rewind_from := Vector2.ZERO
+var _rewind_to := Vector2.ZERO
+var _rewind_velocity := Vector2.ZERO
+var _history: Array = [] # snapshots de posición/velocidad, como máximo 1.75 s
 var fire_interval := 0.30
 var projectile_speed := 420.0
 var damage := 10.0
@@ -45,8 +49,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_push_history()
 	if _rewind_active > 0.0:
-		_rewind_active -= delta
-		_do_rewind_step()
+		_do_rewind_step(delta)
 		return
 	var move := _read_move()
 	var want_fire := _read_fire()
@@ -138,10 +141,10 @@ func _try_fire() -> void:
 	cut.setup(aim_dir, projectile_speed, damage, "player")
 
 func _try_dash() -> void:
-	var can_full: bool = GameState.can_dash_full()
-	if not GameState.try_consume_tension(DASH_COST if can_full else 0.0):
+	var dash_scale := GameState.try_consume_dash(DASH_COST)
+	if dash_scale <= 0.0:
 		return
-	_dash_left = dash_time * (1.0 if can_full else 0.5)
+	_dash_left = dash_time * dash_scale
 	_dash_cd = dash_cooldown
 	# i-frames breves (doc 02).
 	$CollisionShape2D.set_deferred("disabled", true)
@@ -152,30 +155,41 @@ func _try_dash() -> void:
 	PlatformService.vibrate("short")
 
 func _try_rewind() -> void:
+	if _rewind_active > 0.0 or _history.size() < 2:
+		return
+	var sample_count := maxi(1, int(GameState.REWIND_DURATION * 60.0))
+	var target_index := maxi(0, _history.size() - sample_count)
+	var target: Dictionary = _history[target_index]
 	if not GameState.try_consume_rewind():
 		return
-	# Rebobina 1.5-2s: solo posición/proyectiles reversibles, sin deshacer daño (doc 02).
-	_rewind_active = 0.25 # ventana de invulnerabilidad + reversión visual
+	_rewind_from = global_position
+	_rewind_to = target["pos"]
+	_rewind_velocity = target["vel"]
+	_rewind_active = REWIND_VISUAL_TIME
+	_history.clear()
+	# Los proyectiles de ambos bandos son reversibles durante este intervalo.
+	get_tree().call_group("projectile_player", "rewind_step", GameState.REWIND_DURATION)
+	get_tree().call_group("projectile_enemy", "rewind_step", GameState.REWIND_DURATION)
 	rewound.emit()
 	PlatformService.vibrate("double")
-	get_tree().call_group("projectile_enemy", "rewind_step", _history)
 
 func _push_history() -> void:
+	if _rewind_active > 0.0:
+		return
 	_history.append({"pos": global_position, "vel": velocity})
 	var max_n := int(GameState.REWIND_DURATION * 60.0)
 	while _history.size() > max_n:
 		_history.pop_front()
 
-func _do_rewind_step() -> void:
-	if _history.size() > 10:
-		var target: Dictionary = _history[_history.size() - 10]
-		global_position = target["pos"]
-		velocity = target["vel"]
-		for i in 10:
-			if not _history.is_empty():
-				_history.pop_back()
-	else:
-		_history.clear()
+func _do_rewind_step(delta: float) -> void:
+	_rewind_active = maxf(0.0, _rewind_active - delta)
+	var progress := 1.0 - _rewind_active / REWIND_VISUAL_TIME
+	# Suaviza el salto sin convertir el rebobinado en una teletransportación abrupta.
+	var eased := progress * progress * (3.0 - 2.0 * progress)
+	global_position = _rewind_from.lerp(_rewind_to, eased)
+	velocity = _rewind_velocity if _rewind_active <= 0.0 else Vector2.ZERO
+	if _rewind_active <= 0.0:
+		move_and_slide()
 
 func _try_use_consumable() -> void:
 	if "repair_coil" in GameState.items:

@@ -2,8 +2,8 @@
 
 ## Estado y fuentes
 
-- Proyecto Godot 4.x (4.3 verificado) en producción del vertical slice. `ROADMAP.md` manda; `README.md` + `documentacion/` son contexto; `plantillas/` para fichas y decisiones.
-- Decisión motor cerrada: D-001 Godot en `plantillas/registro-de-decisiones-D-001-motor.md`. No reabrir sin playtest H0.
+- Proyecto Godot 4.7.2 + GDScript en estabilización H0 del vertical slice. `ROADMAP.md` manda; `README.md` + `documentacion/` son contexto; `plantillas/` para fichas y decisiones.
+- D-001 (`plantillas/registro-de-decisiones-D-001-motor.md`) está provisional hasta el playtest H0 en Android real; no añadir una segunda ruta de motor todavía.
 - Estructura: `core/` (autoloads GameState/SaveService/SynergyDB/RoomGenerator), `content/*.json` (balance editable), `gameplay/` (player/enemies/rooms/main), `ui/`, `platform/`, `assets/`, `tests/`, `tools/`, `saves/`.
 
 ## Flujo de trabajo
@@ -30,11 +30,13 @@
 
 ## Verificación
 
-- Godot binario local: `/tmp/opencode/Godot_v4.3-stable_linux.x86_64`. Si no existe, descargar Godot 4.3 stable linux.x86_64.
-- `python3 tools/validate_content.py` — balance JSON (falla si item/sinergia/enemigo inválido; avisa si >2 relaciones).
-- `/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --headless --import --path .` — debe salir limpio.
-- `/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --headless --script tools/validate_content.gd --path .` — sinergias + generación.
-- `/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --headless --script tests/test_rules.gd --path .` — tensión/vida/rewind/semilla.
-- Jugar: `/tmp/opencode/Godot_v4.3-stable_linux.x86_64 --path .` (WASD+ratón/espacio/Q, R reintenta, pausa con Esc).
+- **No ejecutes pruebas, builds, exportaciones ni instalaciones hasta que el usuario lo pida explícitamente.** Los comandos siguientes son la fuente de verificación, pero no se lanzan por iniciativa propia.
+- Godot 4.7.2 local: `/tmp/opencode/godot-4.7.2-bin/Godot_v4.7.2-stable_linux.x86_64`; las plantillas están en `~/.local/share/godot/export_templates/4.7.2.stable/`.
+- `python3 tools/validate_content.py` — valida el JSON; las relaciones >2 son advertencia hasta que H2 las normalice.
+- `godot --headless --import --path .` — import sin errores de parseo.
+- `godot --headless --script tests/test_rules.gd --path .` — estado, dash, daño, rebobinado, semilla y guardado.
+- `godot --headless --script tests/test_h0_flow.gd --path .` — smoke `start -> combat` con jugador/enemigos.
+- `godot --headless --script tools/validate_content.gd --path .` — valida las constantes GDScript y la generación.
+- Exportar con `ANDROID_HOME=$HOME/Android/Sdk`, `ANDROID_SDK_ROOT=$ANDROID_HOME` y `JAVA_HOME` configurado; no inventes rutas de keystore para otros equipos.
 - Antes de afirmar compatibilidad con una plataforma, genera una compilación limpia de distribución y pruébala en hardware real (no solo emulador), incluyendo rendimiento, ciclo de vida, orientación/áreas seguras, controles, audio y guardar/cargar/migrar. La regresión crítica incluye movimiento, dash, tensión, rebobinado, carga de partida, puertas, objetos y regeneración de semilla.
 - No se debe publicar si se pierde una partida, se corrompe un guardado, hay ataques invisibles, controles inutilizables, errores de licencia o fallos graves de compilación/firma; consulta los criterios de bloqueo de `documentacion/12-pruebas-riesgos-y-metricas.md`.

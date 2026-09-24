@@ -2,11 +2,11 @@
 
 - **ID:** D-001
 - **Fecha:** 2026-09-24
-- **Estado:** confirmada
+- **Estado:** provisional
 - **Área:** tecnología
 
 ## Problema
-Elegir motor para vertical slice (doc 09/13): Godot 4.x + GDScript vs libGDX + Kotlin.
+Elegir motor para vertical slice (doc 09/13): Godot 4.7.2 + GDScript vs libGDX + Kotlin.
 
 ## Opciones consideradas
 1. Godot 4.x — editor visual, ruta rápida Android+escritorio, GDScript.
@@ -14,7 +14,7 @@ Elegir motor para vertical slice (doc 09/13): Godot 4.x + GDScript vs libGDX + K
 3. Prototipo lógica en Python — solo reglas, luego portar.
 
 ## Opción elegida
-Godot 4.x (4.3 estable verificado) para producción del slice.
+Godot 4.7.2 + GDScript para producción del slice. La decisión se mantiene provisional hasta cerrar el playtest H0 en Android real.
 
 ## Motivo
 Prioridad terminar y publicar con menos infraestructura (doc 09.4). Equipo pequeño, juego 2D, necesidad de editor, partículas, UI y exportación rápida.

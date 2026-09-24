@@ -7,20 +7,25 @@ signal cleared
 var enemies_to_spawn: Array = []
 var spawned: Array = []
 var is_cleared := false
+var room_data: Dictionary = {}
+var _ready_done := false
 
 func setup(room: Dictionary) -> void:
+	if _ready_done:
+		push_error("Room.setup() must be called before adding the room to the tree")
+		return
+	room_data = room.duplicate(true)
 	kind = String(room.get("kind", "combat"))
 	enemies_to_spawn = (room.get("enemies", []) as Array).duplicate()
 
 func _ready() -> void:
+	_ready_done = true
 	_spawn_walls()
 	_spawn_player()
 	_spawn_enemies()
-	if enemies_to_spawn.is_empty():
-		_mark_cleared()
 
 func _process(_delta: float) -> void:
-	if is_cleared:
+	if is_cleared or not GameState.is_running:
 		return
 	for e in spawned:
 		if is_instance_valid(e):
@@ -72,5 +77,7 @@ func _spawn_enemies() -> void:
 			x += 120.0
 
 func _mark_cleared() -> void:
+	if is_cleared or not GameState.is_running:
+		return
 	is_cleared = true
 	cleared.emit()

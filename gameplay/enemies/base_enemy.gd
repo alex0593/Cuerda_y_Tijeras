@@ -18,6 +18,9 @@ func _ready() -> void:
 	hp = max_hp
 
 func _physics_process(delta: float) -> void:
+	if not GameState.is_running:
+		velocity = Vector2.ZERO
+		return
 	_flash = maxf(0.0, _flash - delta)
 	_bind_left = maxf(0.0, _bind_left - delta)
 	modulate = Color(1, 0.5, 0.5) if _flash > 0.0 else Color.WHITE

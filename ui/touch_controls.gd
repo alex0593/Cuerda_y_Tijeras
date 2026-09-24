@@ -18,21 +18,32 @@ const MAX_DRAG := 90.0
 @onready var right_knob: Control = $Right/Knob
 @onready var dash_btn: Button = $Right/Dash
 @onready var rewind_btn: Button = $Right/Rewind
+@onready var pause_btn: Button = $Pause
+@onready var restart_btn: Button = $Restart
 var _left_home := Vector2.ZERO
 var _right_home := Vector2.ZERO
 var _ui_touches := {} # touch index -> action ("dash"/"rewind")
 
 func _ready() -> void:
 	add_to_group("touch")
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = DisplayServer.is_touchscreen_available() or OS.has_feature("android") or OS.has_feature("ios")
 	_left_home = left_knob.position
 	_right_home = right_knob.position
+	restart_btn.visible = false
+
+func _process(_delta: float) -> void:
+	restart_btn.visible = visible and not GameState.is_running
 
 func _ui_action_at(pos: Vector2) -> String:
 	if dash_btn.get_global_rect().grow(12.0).has_point(pos):
 		return "dash"
 	if rewind_btn.get_global_rect().grow(12.0).has_point(pos):
 		return "rewind"
+	if pause_btn.get_global_rect().grow(12.0).has_point(pos):
+		return "pause"
+	if restart_btn.visible and restart_btn.get_global_rect().grow(12.0).has_point(pos):
+		return "restart"
 	return ""
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -80,4 +91,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			var d2 = event.position - _aim_origin
 			if d2.length() > DEADZONE:
 				aim_vec = d2.normalized()
+			else:
+				aim_vec = Vector2.ZERO
 			right_knob.position = _right_home + d2.limit_length(MAX_DRAG) * 0.4

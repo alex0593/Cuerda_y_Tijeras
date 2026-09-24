@@ -2,13 +2,14 @@
 
 > Roguelite de acción 2D para Android, pensado desde el inicio para una futura adaptación a otras plataformas.
 
-**Estado:** preproducción  
-**Versión del documento:** 0.2  
-**Plataforma inicial:** Android  
-**Plataformas futuras posibles:** Windows, Linux, macOS, iOS y web  
-**Género:** roguelite cenital de acción, exploración de habitaciones y combinaciones de objetos  
-**Estilo visual propuesto:** títeres de sombra, recortes de papel y juguetes mecánicos  
-**Motor:** pendiente de una prueba técnica; Godot 4.x es la opción más rápida y libGDX + Kotlin la opción si Kotlin es prioritario  
+**Estado:** prototipo técnico H0 / preproducción
+**Versión del documento:** 0.3
+**Plataforma inicial:** Android
+**Plataformas futuras posibles:** Windows, Linux, macOS, iOS y web
+**Género:** roguelite cenital de acción, exploración de habitaciones y combinaciones de objetos
+**Estilo visual propuesto:** títeres de sombra, recortes de papel y juguetes mecánicos
+**Motor:** Godot 4.7.2 + GDScript; decisión registrada en `plantillas/registro-de-decisiones-D-001-motor.md`
+**Estado técnico:** el vertical slice está en estabilización; el estado verificable está en `ROADMAP.md`
 **Duración objetivo:** 10–15 minutos por partida  
 **Orientación:** horizontal  
 
@@ -85,9 +86,4 @@ También se incluyen plantillas en [`plantillas/`](plantillas/) para registrar o
 
 ## Próximo paso
 
-Realizar una prueba técnica breve con dos opciones:
-
-1. **Godot 4.x**, para comprobar rapidez y facilidad de exportación.
-2. **libGDX + Kotlin**, para comprobar cuánto trabajo exige mantener Kotlin.
-
-La prueba debe incluir movimiento táctil, disparo, dash, una animación de títer, guardado y exportación a Android y escritorio. Después se elige una herramienta y se empieza el vertical slice; no se produce arte final antes de validar el juego.
+Completar H0 sobre Godot 4.7.2: probar en un Android real el movimiento táctil, disparo, dash, rebobinado, pausa, reinicio y orientación landscape. Después corregir el núcleo de salas y combate antes de añadir más objetos, enemigos o contenido. No se produce arte final antes de validar el vertical slice.

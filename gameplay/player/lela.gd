@@ -70,14 +70,30 @@ func _physics_process(delta: float) -> void:
 		_try_use_consumable()
 
 func _read_move() -> Vector2:
-	var v := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if v.length() > 0.01:
-		return v.normalized()
-	# Joystick táctil escribe en este mismo action vía TouchControls (misc).
+	var t := _touch_move()
+	if t != Vector2.ZERO:
+		return t
+	return Input.get_vector("move_left", "move_right", "move_up", "move_down")
+
+func _touch() -> Node:
+	return get_tree().get_first_node_in_group("touch")
+
+func _touch_move() -> Vector2:
+	var t := _touch()
+	if t and t.get("move_vec") != Vector2.ZERO:
+		return t.get("move_vec")
+	return Vector2.ZERO
+
+func _touch_aim() -> Vector2:
+	var t := _touch()
+	if t and t.get("aim_active"):
+		return t.get("aim_vec")
 	return Vector2.ZERO
 
 func _read_fire() -> bool:
 	if Input.is_action_pressed("fire"):
+		return true
+	if _touch_aim() != Vector2.ZERO:
 		return true
 	if SaveService.settings.get("auto_fire", false):
 		return _nearest_enemy_dir() != Vector2.ZERO
@@ -87,11 +103,15 @@ func _read_dash_pressed() -> bool:
 	return Input.is_action_just_pressed("dash")
 
 func _update_aim() -> void:
-	var m := get_global_mouse_position() - global_position
-	if Input.is_action_pressed("fire") and m.length() > 4.0:
-		aim_dir = m.normalized()
-	elif velocity.length() > 10.0:
-		aim_dir = velocity.normalized()
+	var ta := _touch_aim()
+	if ta != Vector2.ZERO:
+		aim_dir = ta
+	else:
+		var m := get_global_mouse_position() - global_position
+		if Input.is_action_pressed("fire") and m.length() > 4.0:
+			aim_dir = m.normalized()
+		elif velocity.length() > 10.0:
+			aim_dir = velocity.normalized()
 	rotation = 0.0
 	if muzzle:
 		muzzle.position = aim_dir * 26.0

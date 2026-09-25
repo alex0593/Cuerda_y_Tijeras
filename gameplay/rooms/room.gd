@@ -15,6 +15,7 @@ var rng := RandomNumberGenerator.new()
 var door_body: StaticBody2D = null
 var door_visual: Polygon2D = null
 var exit_area: Area2D = null
+var exit_hint: Label = null
 var _ready_done := false
 
 func setup(room: Dictionary) -> void:
@@ -119,6 +120,13 @@ func _spawn_exit() -> void:
 	exit_area.add_child(exit_collision)
 	exit_area.body_entered.connect(_on_exit_body_entered)
 	add_child(exit_area)
+	exit_hint = Label.new()
+	exit_hint.text = "SALIDA CERRADA"
+	exit_hint.position = Vector2(820, 205)
+	exit_hint.size = Vector2(120, 28)
+	exit_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exit_hint.add_theme_color_override("font_color", Color(0.55, 0.20, 0.16))
+	add_child(exit_hint)
 
 func _spawn_player() -> void:
 	var lela := preload("res://gameplay/player/lela.tscn").instantiate()
@@ -159,6 +167,9 @@ func _open_exit() -> void:
 			collision.set_deferred("disabled", true)
 	if is_instance_valid(door_visual):
 		door_visual.color = Color(0.35, 0.65, 0.35)
+	if is_instance_valid(exit_hint):
+		exit_hint.text = "SALIDA ABIERTA →"
+		exit_hint.add_theme_color_override("font_color", Color(0.20, 0.55, 0.25))
 	if is_instance_valid(exit_area):
 		exit_area.monitoring = true
 		var player := get_tree().get_first_node_in_group("player") as Node2D

@@ -38,7 +38,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Soldado de estaño con escudo, carga y aviso; Caja de música con aviso circular y recompensa.
 - [x] Presupuesto de enemigos, semillas por sala y drops deterministas.
 - [x] Pausa/reanudación y reinicio Android/escritorio preparados.
-- [ ] Validar una partida completa de principio a jefe en hardware real.
+- [x] Validación automatizada H1, export Linux/Android, instalación y lanzamiento en Android.
+- [ ] Playtest manual completo de principio a jefe en hardware real.
 - [ ] Ajustar la dificultad después de ese playtest.
 
 ## H2 — Objetos e inventario

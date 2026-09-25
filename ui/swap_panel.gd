@@ -21,6 +21,8 @@ func _ready() -> void:
 	visible = false
 	_build()
 
+
+
 func _build() -> void:
 	_dim = ColorRect.new()
 	_dim.name = "Dim"

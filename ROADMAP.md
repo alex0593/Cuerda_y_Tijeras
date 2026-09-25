@@ -57,8 +57,10 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 
 - [x] Recompensas con semilla: los 10 objetos son alcanzables y ya no hay literales en el código.
 - [x] Elección de 3 objetos por sala, con motivo de rechazo legible.
-- [x] Cambio de objetos con el slot lleno mediante panel, sin pérdida involuntaryaria.
-- [x] Exportar e instalar el APK H3 (`0.3.0-h3`) y recorrer las 7 salas en hardware.
+- [x] Cambio de objetos con el slot lleno mediante panel, sin pérdida involuntaria.
+- [x] Botón atrás pausa en vez de cerrar la app y perder la partida.
+- [x] Botones táctiles funcionales (`Dash`, `Rewind`, `Ⅱ`, `Reintentar`).
+- [x] Exportar e instalar el APK H3 (`0.3.5-h3`) y recorrer las 7 salas en hardware.
 - [ ] Confirmar en persona el panel de cambio de objetos.
 - [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [ ] Caja de Cero con dos fases funcionales y contraestrategias.

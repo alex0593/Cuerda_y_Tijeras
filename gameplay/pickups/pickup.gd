@@ -11,7 +11,7 @@ func _ready() -> void:
 	var label := Label.new()
 	label.name = "Label"
 	label.text = _display_name()
-	label.position = Vector2(-70, -52)
+	label.position = Vector2(-70, -76)
 	label.size = Vector2(140, 46)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -42,13 +42,22 @@ func _physics_process(delta: float) -> void:
 			visual.modulate = Color(1.0, 0.55, 0.55) if int(_flash_time * 8.0) % 2 == 0 else Color(1, 1, 1)
 		if _flash_time <= 0.0 and visual:
 			visual.modulate = Color(1, 1, 1)
-	# Imán atrae recursos (doc 05).
-	if "iron_magnet" in GameState.items:
+	# Imán atrae recursos (doc 05), pero no lo que no se puede recoger:
+	# si no, los objetos rechazados se acumulan sobre la jugadora.
+	if "iron_magnet" in GameState.items and _is_collectable():
 		var p := get_tree().get_first_node_in_group("player") as Node2D
 		if p:
 			var d: float = global_position.distance_to(p.global_position)
 			if d < 96.0:
 				global_position = global_position.move_toward(p.global_position, 220.0 * delta)
+
+func _is_collectable() -> bool:
+	if not kind.begins_with("item:"):
+		return true
+	var info := GameState.get_swap_info(kind.trim_prefix("item:"))
+	if bool(info.get("needs_swap", false)):
+		return true
+	return String(info.get("reason", "")) == ""
 
 func _on_body(body: Node) -> void:
 	if not body.is_in_group("player"):

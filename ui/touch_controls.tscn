@@ -80,6 +80,7 @@ offset_bottom = 30.0
 color = Color(0, 0, 0, 0.3)
 
 [node name="Dash" type="Button" parent="Right"]
+mouse_filter = 2
 offset_left = 110.0
 offset_top = -60.0
 offset_right = 190.0
@@ -87,6 +88,7 @@ offset_bottom = 20.0
 text = "Dash"
 
 [node name="Rewind" type="Button" parent="Right"]
+mouse_filter = 2
 offset_left = 110.0
 offset_top = -140.0
 offset_right = 190.0
@@ -94,6 +96,7 @@ offset_bottom = -70.0
 text = "⟲"
 
 [node name="Pause" type="Button" parent="."]
+mouse_filter = 2
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -104,6 +107,7 @@ offset_bottom = 64.0
 text = "Ⅱ"
 
 [node name="Restart" type="Button" parent="."]
+mouse_filter = 2
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0

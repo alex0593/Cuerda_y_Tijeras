@@ -141,3 +141,23 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("pause") and not ($End as CanvasLayer).visible:
 		get_tree().paused = not get_tree().paused
 		$PauseOverlay.visible = get_tree().paused
+
+func _unhandled_input(event: InputEvent) -> void:
+	# En Android el botón atrás cerraba la app y perdía la partida.
+	# Ahora pausa; con el panel abierto, lo cierra.
+	if not _is_back_pressed(event):
+		return
+	if is_instance_valid(swap_panel) and bool(swap_panel.get("is_open")):
+		swap_panel.call("_close")
+		return
+	if ($End as CanvasLayer).visible:
+		return
+	get_viewport().set_input_as_handled()
+	if not get_tree().paused:
+		get_tree().paused = true
+		$PauseOverlay.visible = true
+
+func _is_back_pressed(event: InputEvent) -> bool:
+	if event.is_action_pressed("ui_cancel"):
+		return true
+	return event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_BACK

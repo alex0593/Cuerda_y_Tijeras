@@ -6,6 +6,12 @@ var failures: Array[String] = []
 func _init() -> void:
 	call_deferred("_run")
 
+func _back_event() -> InputEventKey:
+	var key := InputEventKey.new()
+	key.keycode = KEY_BACK
+	key.pressed = true
+	return key
+
 func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
@@ -66,8 +72,91 @@ func _run() -> void:
 	_check("trapped_notes" in state.synergies, "el cambio debe formar notas atrapadas")
 
 	state.end_run(false)
+	await _run_touch_buttons()
+	await _run_back_button()
+
+func _run_touch_buttons() -> void:
+	# Los botones no deben quedarse el toque: si lo hacen, la jugadora nunca
+	# puede pausar, hacer dash ni rebobinar en el móvil.
+	var scene = load("res://gameplay/main/game.tscn").instantiate()
+	root.add_child(scene)
+	await process_frame
+	await process_frame
+	var touch = scene.get_node_or_null("TouchControls")
+	_check(touch != null, "debe existir TouchControls")
+	if touch == null:
+		return
+	touch.visible = true
+	var state: Node = root.get_node_or_null("GameState")
+	# Cada botón tiene que dejar pasar el evento.
+	for button_name in ["Dash", "Rewind"]:
+		var button = touch.get_node_or_null("Right/" + button_name) as Control
+		_check(button != null, "falta el botón %s" % button_name)
+		if button:
+			_check(button.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+				"%s debe ignorar el toque para que _unhandled_input lo reciba" % button_name)
+	for button_name in ["Pause", "Restart"]:
+		var button = touch.get_node_or_null(button_name) as Control
+		_check(button != null, "falta el botón %s" % button_name)
+		if button:
+			_check(button.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+				"%s debe ignorar el toque para que _unhandled_input lo reciba" % button_name)
+
+	# Un toque sobre el botón de pausa debe pausar de verdad.
+	var pause_button = touch.get_node_or_null("Pause") as Control
+	if pause_button:
+		var centre := pause_button.get_global_rect().get_center()
+		var action := String(touch.call("_ui_action_at", centre))
+		_check(action == "pause", "el centro del botón debe mapearse a la acción pause")
+
+	state.end_run(false)
+	paused = false
+	if is_instance_valid(scene):
+		scene.free()
+	for i in 3:
+		await process_frame
+
+func _run_back_button() -> void:
+	# El botón atrás de Android no debe cerrar la app ni perder la partida.
+	var scene = load("res://gameplay/main/game.tscn").instantiate()
+	root.add_child(scene)
+	await process_frame
+	await process_frame
+	var state: Node = root.get_node_or_null("GameState")
+	_check(state != null and bool(state.is_running), "debe haber partida en curso")
+
+	# En Android el botón atrás llega como KEYCODE_BACK.
+	scene._unhandled_input(_back_event())
+	await process_frame
+	_check(bool(paused), "el botón atrás debe pausar, no cerrar la app")
+	_check(state != null and bool(state.is_running), "la partida no debe perderse con atrás")
+
+	scene._unhandled_input(_back_event())
+	await process_frame
+	_check(bool(paused), "atrás con la partida ya pausada no debe hacer nada")
+
+	# Con el panel de cambio abierto, atrás debe cerrar solo el panel.
+	paused = false
+	var panel = scene.get_node_or_null("SwapPanel")
+	_check(panel != null, "debe existir el panel de cambio")
+	if panel:
+		panel.call("open", null, "spring_jumper", ["scissors_precision"])
+		await process_frame
+		_check(bool(paused), "el panel debe congelar la partida")
+		scene._unhandled_input(_back_event())
+		await process_frame
+		_check(not bool(panel.get("is_open")), "atrás debe cerrar el panel de cambio")
+		_check(not bool(paused), "cerrar el panel debe reanudar la partida")
+		_check(state != null and bool(state.is_running), "cerrar el panel no debe perder la partida")
+
+	state.end_run(false)
+	paused = false
+	if is_instance_valid(scene):
+		scene.free()
+	for i in 3:
+		await process_frame
 	if failures.is_empty():
-		print("H3_SWAP_OK: cambio de objetos con slot lleno y cancelación segura")
+		print("H3_SWAP_OK: cambio de objetos, cancelación segura y botón atrás")
 		quit(0)
 	else:
 		for failure in failures:

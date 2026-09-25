@@ -51,15 +51,17 @@ func _spawn_current() -> void:
 	elif String(data.get("reward", "")) == "risk_chest":
 		_drop_reward(Vector2(760, 200), "item:spring_jumper")
 		_drop_reward(Vector2(760, 340), "item:iron_magnet")
+	elif String(data.get("reward", "")) == "workshop":
+		_drop_reward(Vector2(600, 270), "item:repair_coil")
 	# Las salas sin enemigos se completan después de añadir sus recompensas.
 	if (data.get("enemies", []) as Array).is_empty():
 		room.call("_mark_cleared")
 
 func _drop_reward(pos: Vector2, kind: String) -> void:
 	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
+	pk.kind = kind
 	current_room.add_child(pk)
 	pk.global_position = pos
-	pk.kind = kind
 
 func _on_room_cleared() -> void:
 	if not GameState.is_running or _transitioning:

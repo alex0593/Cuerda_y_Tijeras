@@ -41,6 +41,7 @@ func _tick(delta: float) -> void:
 		"chase":
 			telegraph.visible = false
 			_facing = to.normalized()
+			shield_visual.rotation = _facing.angle()
 			velocity = _facing * move_speed
 			if to.length() < 180.0 and _timer <= 0.0:
 				_state = "telegraph"
@@ -50,6 +51,7 @@ func _tick(delta: float) -> void:
 			telegraph.visible = true
 			_facing = to.normalized()
 			telegraph.rotation = _facing.angle()
+			shield_visual.rotation = _facing.angle()
 			velocity = Vector2.ZERO
 			modulate = Color(1, 0.85, 0.3)
 			if _timer <= 0.0:
@@ -58,6 +60,7 @@ func _tick(delta: float) -> void:
 		"charge":
 			telegraph.visible = false
 			_facing = to.normalized()
+			shield_visual.rotation = _facing.angle()
 			velocity = _facing * 260.0
 			if _timer <= 0.0:
 				_state = "chase"

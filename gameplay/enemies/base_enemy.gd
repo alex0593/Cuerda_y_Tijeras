@@ -62,9 +62,9 @@ func _drop() -> void:
 	var roll := _drop_rng.randf()
 	if roll < 0.25:
 		var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
+		pk.kind = "thread" if roll < 0.15 else "key"
 		get_parent().add_child(pk)
 		pk.global_position = global_position
-		pk.kind = "thread" if roll < 0.15 else "key"
 
 func _try_touch_player() -> void:
 	var p := get_tree().get_first_node_in_group("player") as Node2D

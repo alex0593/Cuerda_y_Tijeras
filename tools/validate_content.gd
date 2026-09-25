@@ -6,12 +6,14 @@ func _init() -> void:
 	var syn = load("res://core/synergy_db.gd").new()
 	syn.reload()
 	var gen = load("res://core/room_generator.gd").new()
+	# En headless los autoloads no existen todavía: se inyecta la base de contenido.
+	gen.set_content_db(syn)
 	for e in syn.validate_content():
 		push_error(e)
 		err += 1
 	var run: Dictionary = gen.generate_run(12345)
-	if (run["rooms"] as Array).size() != 6:
-		push_error("flow debe tener 6 salas")
+	if (run["rooms"] as Array).size() != 7:
+		push_error("flow debe tener 7 salas")
 		err += 1
 	for r in run["rooms"]:
 		for e in gen.validate_room(r):

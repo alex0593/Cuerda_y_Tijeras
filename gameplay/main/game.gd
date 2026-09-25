@@ -45,17 +45,20 @@ func _spawn_current() -> void:
 	current_room = room
 	add_child(room)
 	move_child(room, 0)
-	# Recompensa simple de vertical slice: primer cofre da tijeras precisión.
-	if String(data.get("reward", "")) == "chest" or String(data.get("reward", "")) == "choice_2":
-		_drop_reward(Vector2(760, 270), "item:scissors_precision")
-	elif String(data.get("reward", "")) == "risk_chest":
-		_drop_reward(Vector2(760, 200), "item:spring_jumper")
-		_drop_reward(Vector2(760, 340), "item:iron_magnet")
-	elif String(data.get("reward", "")) == "workshop":
-		_drop_reward(Vector2(600, 270), "item:repair_coil")
+	_drop_offers(data.get("offers", []) as Array)
 	# Las salas sin enemigos se completan después de añadir sus recompensas.
 	if (data.get("enemies", []) as Array).is_empty():
 		room.call("_mark_cleared")
+
+# Las ofertas vienen del generador con semilla (doc 05): la jugadora decide
+# cuáles recoger antes de salir por la puerta, así que se dejan todas en el suelo.
+func _drop_offers(offers: Array) -> void:
+	var slots: Array[Vector2] = [
+		Vector2(320, 150), Vector2(600, 150), Vector2(860, 150),
+		Vector2(420, 400), Vector2(700, 400),
+	]
+	for i in mini(offers.size(), slots.size()):
+		_drop_reward(slots[i], "item:%s" % String(offers[i]))
 
 func _drop_reward(pos: Vector2, kind: String) -> void:
 	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
@@ -82,8 +85,11 @@ func _room_requires_exit() -> bool:
 	if not is_instance_valid(current_room):
 		return false
 	var kind := String(current_room.kind)
-	var reward := String(current_room.room_data.get("reward", ""))
-	return kind in ["combat", "risk", "boss"] or reward != ""
+	# Las salas de recompensa mantienen la puerta cerrada para dar tiempo a recoger
+	# los objetos que interesen; start deja pasar al terminar.
+	if kind in ["combat", "risk", "boss"]:
+		return true
+	return kind != "start"
 
 func _advance_to_next_room() -> void:
 	if _transitioning:

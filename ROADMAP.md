@@ -45,6 +45,7 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 ## H2 — Objetos e inventario
 
 - [x] `content/*.json` es la fuente runtime de objetos, sinergias y enemigos.
+- [x] Recompensas generadas con semilla desde el contenido, sin literales de objeto en el código.
 - [x] Slots de arma, dos mecanismos, dos amuletos y consumibles; decisión provisional D-002.
 - [x] Rarezas, restricciones y cargas de consumibles en datos/runtime.
 - [x] Efectos iniciales implementados: dash de tijeras, puntadas vivas, retorno magnético, notas atrapadas, órbita adhesiva y reparación con impulso.
@@ -54,6 +55,9 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 
 ## H3 — Vertical slice 5–10 minutos
 
+- [x] Recompensas con semilla: los 10 objetos son alcanzables y ya no hay literales en el código.
+- [x] Elección de 3 objetos por sala, con motivo de rechazo legible.
+- [ ] Exportar e instalar el APK H3 y comprobar la elección de objetos en hardware.
 - [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [ ] Caja de Cero con dos fases funcionales y contraestrategias.
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.

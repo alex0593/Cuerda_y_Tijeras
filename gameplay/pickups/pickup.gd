@@ -2,14 +2,17 @@
 extends Area2D
 
 @export var kind := "thread"
+var _flash_time := 0.0
+var _rejected := false
 
 func _ready() -> void:
 	add_to_group("pickup")
 	body_entered.connect(_on_body)
 	var label := Label.new()
+	label.name = "Label"
 	label.text = _display_name()
-	label.position = Vector2(-70, -34)
-	label.size = Vector2(140, 28)
+	label.position = Vector2(-70, -52)
+	label.size = Vector2(140, 46)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.z_index = 2
@@ -32,6 +35,13 @@ func _display_color() -> Color:
 	return Color(0.20, 0.45, 0.70)
 
 func _physics_process(delta: float) -> void:
+	if _flash_time > 0.0:
+		_flash_time -= delta
+		var visual := get_node_or_null("Vis") as Polygon2D
+		if visual:
+			visual.modulate = Color(1.0, 0.55, 0.55) if int(_flash_time * 8.0) % 2 == 0 else Color(1, 1, 1)
+		if _flash_time <= 0.0 and visual:
+			visual.modulate = Color(1, 1, 1)
 	# Imán atrae recursos (doc 05).
 	if "iron_magnet" in GameState.items:
 		var p := get_tree().get_first_node_in_group("player") as Node2D
@@ -45,8 +55,22 @@ func _on_body(body: Node) -> void:
 		return
 	var consumed := true
 	if kind.begins_with("item:"):
-		consumed = GameState.add_item(kind.trim_prefix("item:"))
+		var item_id := kind.trim_prefix("item:")
+		consumed = GameState.add_item(item_id)
+		if not consumed:
+			# Sin feedback el objeto parece roto: la jugadora no entiende por qué
+			# no se recoge (doc 05, restricciones deben ser legibles).
+			var permission := GameState.can_add_item(item_id)
+			_reject(String(permission.get("reason", "no se puede llevar")))
 	else:
 		GameState.add_resource(kind)
 	if consumed:
 		queue_free()
+
+func _reject(reason: String) -> void:
+	_flash_time = 0.6
+	var label := get_node_or_null("Label") as Label
+	if label and not _rejected:
+		_rejected = true
+		label.text = "%s\n%s" % [_display_name(), reason]
+		label.add_theme_color_override("font_color", Color(0.85, 0.45, 0.40))

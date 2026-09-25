@@ -92,14 +92,21 @@ func validate_content() -> Array[String]:
 		errors.append("synergies_data está vacío")
 	for item_id in items_data.keys():
 		var item: Dictionary = items_data[item_id]
-		if not item.has("name") or not item.has("slot") or not item.has("tags"):
-			errors.append("objeto %s incompleto" % item_id)
+		for field in ["name", "description", "slot", "rarity", "tags", "restriction", "effect", "max_charges"]:
+			if not item.has(field):
+				errors.append("objeto %s incompleto: falta %s" % [item_id, field])
 		if not (String(item.get("slot", "")) in ["weapon", "mechanism", "amulet", "consumable"]):
 			errors.append("objeto %s tiene slot inválido" % item_id)
+		if not (String(item.get("rarity", "")) in ["común", "especial", "rara"]):
+			errors.append("objeto %s tiene rareza inválida" % item_id)
+		if int(item.get("max_charges", 0)) <= 0:
+			errors.append("objeto %s necesita max_charges positivo" % item_id)
 	var relation_counts := {}
 	for synergy_id in synergies_data.keys():
 		var definition: Dictionary = synergies_data[synergy_id]
 		var needs: Array = definition.get("needs", [])
+		if not definition.has("name") or not definition.has("effect"):
+			errors.append("sinergia %s incompleta" % synergy_id)
 		if needs.size() != 2:
 			errors.append("sinergia %s debe tener exactamente dos requisitos" % synergy_id)
 		for required in needs:

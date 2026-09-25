@@ -30,7 +30,7 @@ func _refresh_inventory() -> void:
 		weapon[0] if not weapon.is_empty() else "-",
 		mechanism[0] if not mechanism.is_empty() else "-",
 		amulet[0] if not amulet.is_empty() else "-",
-		consumable.size()
+		GameState.get_slot_charges("consumable")
 	]
 
 func _process(_delta: float) -> void:

@@ -9,11 +9,17 @@ try:
 except Exception as e:
     print(f"FATAL: {e}"); sys.exit(2)
 for iid, d in items["items"].items():
-    for k in ("name","slot","tags"):
+    for k in ("name", "description", "slot", "rarity", "tags", "restriction", "effect", "max_charges"):
         if k not in d: errors.append(f"item {iid} sin {k}")
     if d.get("slot") not in ("weapon","mechanism","amulet","consumable"):
         errors.append(f"item {iid} slot inválido")
+    if d.get("rarity") not in ("común", "especial", "rara"):
+        errors.append(f"item {iid} rareza inválida")
+    if d.get("max_charges", 0) <= 0:
+        errors.append(f"item {iid} max_charges inválido")
 for sid, s in items["synergies"].items():
+    if "name" not in s or "effect" not in s:
+        errors.append(f"sinergia {sid} incompleta")
     for n in s.get("needs",[]):
         if n!="shadow" and n not in items["items"]:
             errors.append(f"sinergia {sid} pide {n} desconocido")
@@ -24,7 +30,7 @@ for s in items["synergies"].values():
     for n in s["needs"]:
         if n in items["items"]: c[n]+=1
 for iid, n in c.items():
-    if n>2: print(f"AVISO: {iid} tiene {n} relaciones (>2)")
+    if n>2: errors.append(f"item {iid} tiene {n} relaciones (>2)")
 for eid, e in enemies["enemies"].items():
     if "hp" not in e or "cost" not in e: errors.append(f"enemigo {eid} sin hp/cost")
 if errors:

@@ -219,7 +219,7 @@ func _do_rewind_step(delta: float) -> void:
 func _try_use_consumable() -> void:
 	if "repair_coil" in GameState.items and GameState.life < GameState.LIFE_MAX:
 		GameState.heal(1.0)
-		GameState.remove_item("repair_coil")
+		GameState.consume_item("repair_coil")
 		# Sinergia resorte+bobina: parte de tensión en dash (doc 05).
 		if "spring_jumper" in GameState.items:
 			_dash_cd = 0.0

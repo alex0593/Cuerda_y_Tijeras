@@ -30,6 +30,7 @@ var kills := 0
 var threads := 0
 var keys := 0
 var items: Array[String] = ["scissors_basic"]
+var item_charges: Dictionary = {}
 var inventory: Dictionary = {}
 var synergies: Array[String] = []
 var cause_of_death := ""
@@ -76,6 +77,7 @@ func start_run(p_seed: int = 0) -> void:
 	threads = 0
 	keys = 0
 	items = ["scissors_basic"]
+	item_charges.clear()
 	_rebuild_inventory()
 	synergies = []
 	cause_of_death = ""
@@ -149,18 +151,45 @@ func _rebuild_inventory() -> void:
 		if slot in inventory:
 			var slot_items: Array = inventory[slot]
 			slot_items.append(item_id)
+			if slot == "consumable" and not item_charges.has(item_id):
+				item_charges[item_id] = 1
 	inventory_changed.emit()
 
 func get_slot_items(slot: String) -> Array:
 	return (inventory.get(slot, []) as Array).duplicate()
 
-func add_item(item_id: String) -> bool:
-	if (item_id in items):
-		return false
+func get_slot_charges(slot: String) -> int:
+	var total := 0
+	for item_id in get_slot_items(slot):
+		total += int(item_charges.get(item_id, 1))
+	return total
+
+func can_add_item(item_id: String) -> Dictionary:
 	var item_data := SynergyDB.get_item(item_id)
 	if item_data.is_empty():
-		push_error("Objeto desconocido: %s" % item_id)
+		return {"allowed": false, "reason": "objeto desconocido"}
+	var restriction := String(item_data.get("restriction", "none"))
+	if restriction == "full_life" and life >= LIFE_MAX:
+		return {"allowed": false, "reason": "la vida ya está llena"}
+	return {"allowed": true, "reason": ""}
+
+func add_item(item_id: String) -> bool:
+	var permission := can_add_item(item_id)
+	if not bool(permission["allowed"]):
 		return false
+	if (item_id in items):
+		var existing_slot := String(SynergyDB.get_item(item_id).get("slot", ""))
+		if existing_slot == "consumable":
+			var max_charges := int(SynergyDB.get_item(item_id).get("max_charges", 1))
+			var current := int(item_charges.get(item_id, 1))
+			if current >= max_charges:
+				return false
+			item_charges[item_id] = current + 1
+			inventory_changed.emit()
+			item_added.emit(item_id)
+			return true
+		return false
+	var item_data := SynergyDB.get_item(item_id)
 	var slot := String(item_data.get("slot", ""))
 	var slot_items: Array = inventory.get(slot, [])
 	var capacity := int(SLOT_CAPACITY.get(slot, 0))
@@ -173,13 +202,29 @@ func add_item(item_id: String) -> bool:
 		else:
 			return false
 	items.append(item_id)
+	if slot == "consumable":
+		item_charges[item_id] = 1
 	_rebuild_inventory()
 	_recompute_synergies()
 	item_added.emit(item_id)
 	return true
 
+func consume_item(item_id: String, amount: int = 1) -> bool:
+	if not (item_id in items) or amount <= 0:
+		return false
+	var charges := int(item_charges.get(item_id, 1)) - amount
+	if charges <= 0:
+		items.erase(item_id)
+		item_charges.erase(item_id)
+	else:
+		item_charges[item_id] = charges
+	_rebuild_inventory()
+	_recompute_synergies()
+	return true
+
 func remove_item(item_id: String) -> void:
 	items.erase(item_id)
+	item_charges.erase(item_id)
 	_rebuild_inventory()
 	_recompute_synergies()
 
@@ -220,6 +265,10 @@ func restore_run(data: Dictionary) -> void:
 			continue
 		items.append(id)
 	_rebuild_inventory()
+	var saved_charges: Dictionary = data.get("item_charges", {})
+	for item_id in item_charges.keys():
+		var max_charges := int(SynergyDB.get_item(item_id).get("max_charges", 1))
+		item_charges[item_id] = clampi(int(saved_charges.get(item_id, item_charges[item_id])), 1, max_charges)
 	synergies = []
 	var saved_synergies: Array = data.get("synergies", [])
 	for synergy_id in saved_synergies:

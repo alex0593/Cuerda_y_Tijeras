@@ -46,8 +46,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 
 - [x] `content/*.json` es la fuente runtime de objetos, sinergias y enemigos.
 - [x] Slots de arma, mecanismo, amuleto y consumible; HUD de inventario.
+- [x] Rarezas, restricciones y cargas de consumibles en datos/runtime.
 - [x] Efectos iniciales implementados: dash de tijeras, puntadas vivas, retorno magnético, notas atrapadas, órbita adhesiva y reparación con impulso.
-- [ ] Completar rarezas, restricciones, consumibles apilables y validación de las seis sinergias.
 - [ ] Validación automatizada y playtest de H2 en Android.
 
 ## H3 — Vertical slice 5–10 minutos

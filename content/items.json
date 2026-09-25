@@ -1,16 +1,16 @@
 {
   "version": 1,
   "items": {
-    "scissors_basic": {"name": "Tijeras de taller", "slot": "weapon", "tags": ["cut"], "tension_cost": 4, "damage": 8, "fire_interval": 0.30, "projectile_speed": 420},
-    "scissors_precision": {"name": "Tijeras de precisión", "slot": "weapon", "tags": ["cut", "precision"], "tension_cost": 4, "damage": 10, "fire_interval": 0.28, "projectile_speed": 460},
-    "spring_jumper": {"name": "Resorte saltador", "slot": "mechanism", "tags": ["movement", "spring"], "tension_cost": 2, "dash_bonus": 40},
-    "iron_magnet": {"name": "Imán de hierro", "slot": "mechanism", "tags": ["magnet", "metal"], "tension_cost": 0, "pickup_radius": 96},
-    "music_box": {"name": "Caja de música", "slot": "amulet", "tags": ["music"], "tension_cost": 1, "orbit_damage": 8, "orbit_time": 3.0},
-    "glass_eye": {"name": "Ojo de vidrio", "slot": "amulet", "tags": ["light", "reveal"], "tension_cost": 0, "crit_bonus": 0.15},
-    "taut_thread": {"name": "Hilo tensado", "slot": "amulet", "tags": ["thread"], "tension_cost": 1, "bind_time": 0.8},
-    "screws_cork": {"name": "Tornillos y corcho", "slot": "mechanism", "tags": ["bounce"], "tension_cost": 0, "bounces": 1},
-    "toy_glue": {"name": "Pegamento de juguete", "slot": "amulet", "tags": ["glue"], "tension_cost": 0, "stick_time": 3.0},
-    "repair_coil": {"name": "Bobina de reparación", "slot": "consumable", "tags": ["heal"], "tension_cost": 0, "heal": 1.0, "charges": 1}
+    "scissors_basic": {"name": "Tijeras de taller", "description": "Arma inicial que lanza cortes pequeños.", "slot": "weapon", "rarity": "común", "tags": ["cut"], "restriction": "none", "effect": "directional_cut", "max_charges": 1, "tension_cost": 4, "damage": 8, "fire_interval": 0.30, "projectile_speed": 420},
+    "scissors_precision": {"name": "Tijeras de precisión", "description": "Cortes rápidos y estrechos con mayor alcance.", "slot": "weapon", "rarity": "especial", "tags": ["cut", "precision"], "restriction": "none", "effect": "precision_cut", "max_charges": 1, "tension_cost": 4, "damage": 10, "fire_interval": 0.28, "projectile_speed": 460},
+    "spring_jumper": {"name": "Resorte saltador", "description": "Amplía el dash y permite rebotar al tocar paredes.", "slot": "mechanism", "rarity": "común", "tags": ["movement", "spring"], "restriction": "none", "effect": "spring_dash", "max_charges": 1, "tension_cost": 2, "dash_bonus": 40},
+    "iron_magnet": {"name": "Imán de hierro", "description": "Atrae recursos metálicos y algunos proyectiles.", "slot": "mechanism", "rarity": "común", "tags": ["magnet", "metal"], "restriction": "none", "effect": "magnet_pickup", "max_charges": 1, "tension_cost": 0, "pickup_radius": 96},
+    "music_box": {"name": "Caja de música", "description": "Crea una nota que orbita y daña al contacto.", "slot": "amulet", "rarity": "especial", "tags": ["music"], "restriction": "none", "effect": "music_note", "max_charges": 1, "tension_cost": 1, "orbit_damage": 8, "orbit_time": 3.0},
+    "glass_eye": {"name": "Ojo de vidrio", "description": "Revela el punto débil de los enemigos.", "slot": "amulet", "rarity": "especial", "tags": ["light", "reveal"], "restriction": "none", "effect": "reveal_weak_point", "max_charges": 1, "tension_cost": 0, "crit_bonus": 0.15},
+    "taut_thread": {"name": "Hilo tensado", "description": "El impacto ata brevemente a enemigos pequeños.", "slot": "amulet", "rarity": "común", "tags": ["thread"], "restriction": "none", "effect": "thread_bind", "max_charges": 1, "tension_cost": 1, "bind_time": 0.8},
+    "screws_cork": {"name": "Tornillos y corcho", "description": "Los cortes rebotan una vez en las paredes.", "slot": "mechanism", "rarity": "común", "tags": ["bounce"], "restriction": "none", "effect": "wall_bounce", "max_charges": 1, "tension_cost": 0, "bounces": 1},
+    "toy_glue": {"name": "Pegamento de juguete", "description": "Fija cortes y les permite atrapar enemigos.", "slot": "amulet", "rarity": "común", "tags": ["glue"], "restriction": "none", "effect": "sticky_trap", "max_charges": 1, "tension_cost": 0, "stick_time": 3.0},
+    "repair_coil": {"name": "Bobina de reparación", "description": "Consumible que recupera un segmento de vida.", "slot": "consumable", "rarity": "común", "tags": ["heal"], "restriction": "full_life", "effect": "heal_segment", "max_charges": 1, "charges": 1, "tension_cost": 0, "heal": 1.0}
   },
   "synergies": {
     "impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso", "effect": "dash_attack_wave"},

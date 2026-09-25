@@ -65,6 +65,7 @@ func save_run() -> bool:
 		"life": GameState.life,
 		"rewind_charges": GameState.rewind_charges,
 		"items": GameState.items,
+		"item_charges": GameState.item_charges,
 		"synergies": GameState.synergies,
 		"rooms_visited": GameState.rooms_visited,
 		"kills": GameState.kills,
@@ -111,6 +112,7 @@ func _valid_run_data(data: Dictionary) -> bool:
 		and int(data.get("version", 0)) == FORMAT_VERSION
 		and int(data.get("generator_version", 0)) > 0
 		and data.get("items", []) is Array
+		and data.get("item_charges", {}) is Dictionary
 		and data.get("synergies", []) is Array
 	)
 

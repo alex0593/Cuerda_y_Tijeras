@@ -9,6 +9,8 @@ signal item_added(item_id: String)
 signal inventory_changed
 signal synergy_formed(synergy_id: String)
 signal run_ended(victory: bool)
+# El slot está lleno: la jugadora decide a quién reemplaza.
+signal swap_requested(pickup: Node, new_item_id: String, candidates: Array)
 
 const TENSION_MAX := 100.0
 const TENSION_REGEN_DELAY := 0.6
@@ -197,16 +199,48 @@ func add_item(item_id: String) -> bool:
 		push_error("Objeto sin slot válido: %s" % item_id)
 		return false
 	if slot_items.size() >= capacity:
-		if slot == "weapon" and not slot_items.is_empty():
-			items.erase(String(slot_items[0]))
-		else:
-			return false
+		# Ningún slot descarta nada sin que la jugadora lo decida (doc 05).
+		return false
 	items.append(item_id)
 	if slot == "consumable":
 		item_charges[item_id] = 1
 	_rebuild_inventory()
 	_recompute_synergies()
 	item_added.emit(item_id)
+	return true
+
+# Explica por qué un objeto no entra y, si el slot está lleno, qué objetos
+# podría reemplazar la jugadora. La decisión siempre es suya.
+func get_swap_info(item_id: String) -> Dictionary:
+	var item_data := SynergyDB.get_item(item_id)
+	if item_data.is_empty():
+		return {"needs_swap": false, "reason": "objeto desconocido", "slot": "", "candidates": []}
+	var restriction := String(item_data.get("restriction", "none"))
+	if restriction == "full_life" and life >= LIFE_MAX:
+		return {"needs_swap": false, "reason": "la vida ya está llena", "slot": "", "candidates": []}
+	if item_id in items:
+		return {"needs_swap": false, "reason": "ya lo llevas", "slot": "", "candidates": []}
+	var slot := String(item_data.get("slot", ""))
+	var slot_items := get_slot_items(slot)
+	if slot_items.size() < int(SLOT_CAPACITY.get(slot, 0)):
+		return {"needs_swap": false, "reason": "", "slot": slot, "candidates": []}
+	return {"needs_swap": true, "reason": "", "slot": slot, "candidates": slot_items}
+
+# Cambia un objeto ocupado por otro nuevo del mismo slot.
+func swap_item(new_item_id: String, replaced_item_id: String) -> bool:
+	var info := get_swap_info(new_item_id)
+	if not bool(info.get("needs_swap", false)):
+		return false
+	if not (replaced_item_id in (info.get("candidates", []) as Array)):
+		return false
+	items.erase(replaced_item_id)
+	item_charges.erase(replaced_item_id)
+	items.append(new_item_id)
+	if String(SynergyDB.get_item(new_item_id).get("slot", "")) == "consumable":
+		item_charges[new_item_id] = 1
+	_rebuild_inventory()
+	_recompute_synergies()
+	item_added.emit(new_item_id)
 	return true
 
 func consume_item(item_id: String, amount: int = 1) -> bool:
@@ -234,6 +268,12 @@ func add_resource(resource_id: String) -> void:
 			threads += 1
 		"key":
 			keys += 1
+
+# Aviso breve para cambios de inventario; el HUD lo muestra (doc 05).
+signal notice(text: String)
+
+func show_toast(text: String) -> void:
+	notice.emit(text)
 
 func _recompute_synergies() -> void:
 	var next: Array[String] = []

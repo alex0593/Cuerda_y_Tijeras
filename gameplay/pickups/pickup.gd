@@ -58,10 +58,14 @@ func _on_body(body: Node) -> void:
 		var item_id := kind.trim_prefix("item:")
 		consumed = GameState.add_item(item_id)
 		if not consumed:
-			# Sin feedback el objeto parece roto: la jugadora no entiende por qué
-			# no se recoge (doc 05, restricciones deben ser legibles).
-			var permission := GameState.can_add_item(item_id)
-			_reject(String(permission.get("reason", "no se puede llevar")))
+			var info := GameState.get_swap_info(item_id)
+			if bool(info.get("needs_swap", false)):
+				# El slot está lleno: que la jugadora decida a quién cambia.
+				GameState.swap_requested.emit(self, item_id, info.get("candidates", []))
+			else:
+				# Sin feedback el objeto parece roto: la jugadora no entiende por qué
+				# no se recoge (doc 05, restricciones deben ser legibles).
+				_reject(String(info.get("reason", "no se puede llevar")))
 	else:
 		GameState.add_resource(kind)
 	if consumed:

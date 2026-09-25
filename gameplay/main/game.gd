@@ -9,13 +9,21 @@ var _run_serial := 0
 
 @onready var hud: CanvasLayer = $HUD
 @onready var touch: CanvasLayer = $TouchControls
+@onready var swap_panel: CanvasLayer = $SwapPanel
 
 func _ready() -> void:
 	# El coordinator debe seguir recibiendo entrada mientras el árbol está pausado
 	# para poder cerrar la pausa o reintentar desde el resumen.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameState.run_ended.connect(_on_run_ended)
+	GameState.swap_requested.connect(_on_swap_requested)
 	_start_new_run(randi())
+
+func _on_swap_requested(pickup: Node, new_item_id: String, candidates: Array) -> void:
+	# Solo tiene sentido cambiar objetos con la partida en curso.
+	if not GameState.is_running or not is_instance_valid(swap_panel):
+		return
+	swap_panel.call("open", pickup, new_item_id, candidates)
 
 func _start_new_run(p_seed: int) -> void:
 	_run_serial += 1
@@ -124,6 +132,9 @@ func _on_run_ended(victory: bool) -> void:
 		mins, secs, GameState.rooms_visited, GameState.kills, SaveService.export_seed()]
 
 func _process(_delta: float) -> void:
+	# El panel de cambio congela la partida: pausa y reinicio no deben actuar encima.
+	if is_instance_valid(swap_panel) and bool(swap_panel.get("is_open")):
+		return
 	if ($End as CanvasLayer).visible and Input.is_action_just_pressed("restart"):
 		_start_new_run(randi())
 		return

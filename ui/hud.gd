@@ -14,6 +14,7 @@ func _ready() -> void:
 	GameState.rewind_charges_changed.connect(func(v): rewind_label.text = "⟲ x%d" % v)
 	GameState.inventory_changed.connect(_refresh_inventory)
 	GameState.synergy_formed.connect(_on_synergy)
+	GameState.notice.connect(_on_notice)
 	life_bar.max_value = GameState.LIFE_MAX
 	life_bar.value = GameState.life
 	tension_bar.max_value = GameState.TENSION_MAX
@@ -51,7 +52,13 @@ func _process(_delta: float) -> void:
 
 func _on_synergy(sid: String) -> void:
 	var d: Dictionary = SynergyDB.get_synergy(sid)
-	toast.text = "Sinergia: %s" % String(d.get("name", sid))
+	_show_toast("Sinergia: %s" % String(d.get("name", sid)))
+
+func _on_notice(text: String) -> void:
+	_show_toast(text)
+
+func _show_toast(text: String) -> void:
+	toast.text = text
 	toast.modulate.a = 1.0
 	var t := create_tween()
 	t.tween_interval(1.6)

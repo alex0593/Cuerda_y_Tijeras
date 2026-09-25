@@ -26,7 +26,10 @@ func _run() -> void:
 
 	state.start_run(2026)
 	_check((state.get_slot_items("weapon") as Array).has("scissors_basic"), "el arma inicial debe ocupar el slot weapon")
-	_check(state.add_item("scissors_precision"), "una nueva arma debe entrar en el slot")
+	# El arma es un slot de 1: cambiarla también es una decisión de la jugadora.
+	var weapon_info: Dictionary = state.get_swap_info("scissors_precision")
+	_check(bool(weapon_info.get("needs_swap", false)), "el arma llena debe admitir cambio")
+	_check(state.swap_item("scissors_precision", "scissors_basic"), "una nueva arma debe entrar en el slot")
 	_check(not (state.items as Array).has("scissors_basic"), "reemplazar arma debe retirar la anterior")
 	_check(state.add_item("spring_jumper"), "mecanismo debe ocupar su slot")
 	_check(state.add_item("iron_magnet"), "el segundo mecanismo provisional debe caber")

@@ -49,7 +49,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Rarezas, restricciones y cargas de consumibles en datos/runtime.
 - [x] Efectos iniciales implementados: dash de tijeras, puntadas vivas, retorno magnético, notas atrapadas, órbita adhesiva y reparación con impulso.
 - [x] Validación automatizada H2 en Godot 4.7.2.
-- [ ] Playtest de H2 en Android y confirmación de la decisión D-002.
+- [x] Export e instalación del APK H2 (`0.2.0-h2`) con recorrido de salas 1-6 sin errores.
+- [ ] Confirmar en persona consumibles y sinergias, y cerrar la decisión D-002.
 
 ## H3 — Vertical slice 5–10 minutos
 

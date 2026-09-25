@@ -34,11 +34,12 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 
 ## H1 — Núcleo jugable y salas
 
-- [ ] Completar una sala de combate con entrada segura, cobertura, puertas y salida real.
-- [ ] Hacer que Soldado de estaño y Caja de música tengan aviso, colisiones y recompensa verificables.
-- [ ] Corregir el presupuesto de enemigos y la generación reproducible.
-- [ ] Implementar pausa/reanudación y reinicio Android/escritorio sin softlock.
-- [ ] Probar una partida completa de principio a jefe.
+- [x] Código de sala con entrada segura, cobertura, puerta y zona de salida real.
+- [x] Soldado de estaño con escudo, carga y aviso; Caja de música con aviso circular y recompensa.
+- [x] Presupuesto de enemigos, semillas por sala y drops deterministas.
+- [x] Pausa/reanudación y reinicio Android/escritorio preparados.
+- [ ] Validar una partida completa de principio a jefe en hardware real.
+- [ ] Ajustar la dificultad después de ese playtest.
 
 ## H2 — Objetos e inventario
 

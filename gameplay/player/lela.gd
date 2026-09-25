@@ -23,6 +23,7 @@ var _rewind_active := 0.0
 var _rewind_from := Vector2.ZERO
 var _rewind_to := Vector2.ZERO
 var _rewind_velocity := Vector2.ZERO
+var _music_note: Node2D = null
 var _history: Array = [] # snapshots de posición/velocidad, como máximo 1.75 s
 var fire_interval := 0.30
 var projectile_speed := 420.0
@@ -47,6 +48,20 @@ func _apply_items() -> void:
 		damage = float(d.get("damage", 10.0))
 	if "spring_jumper" in GameState.items:
 		dash_speed = 560.0
+	_ensure_music_note()
+
+func _ensure_music_note() -> void:
+	var wanted := "music_box" in GameState.items
+	if wanted and not is_instance_valid(_music_note):
+		var note = preload("res://gameplay/projectiles/note.tscn").instantiate()
+		note.setup(self, damage, "trapped_notes" in GameState.synergies)
+		get_parent().add_child(note)
+		_music_note = note
+	elif wanted and is_instance_valid(_music_note):
+		_music_note.set_pinned("trapped_notes" in GameState.synergies)
+	elif not wanted and is_instance_valid(_music_note):
+		_music_note.queue_free()
+		_music_note = null
 
 func _physics_process(delta: float) -> void:
 	if not GameState.is_running:
@@ -139,10 +154,13 @@ func _try_fire() -> void:
 		return
 	_fire_cd = fire_interval
 	fired.emit()
+	_spawn_cut(aim_dir, muzzle.global_position if muzzle else global_position, projectile_speed, damage)
+
+func _spawn_cut(direction: Vector2, origin: Vector2, cut_speed: float, cut_damage: float) -> void:
 	var cut := preload("res://gameplay/projectiles/cut.tscn").instantiate()
 	get_parent().add_child(cut)
-	cut.global_position = muzzle.global_position if muzzle else global_position
-	cut.setup(aim_dir, projectile_speed, damage, "player")
+	cut.global_position = origin
+	cut.setup(direction, cut_speed, cut_damage, "player")
 
 func _try_dash() -> void:
 	var dash_scale := GameState.try_consume_dash(DASH_COST)
@@ -155,6 +173,9 @@ func _try_dash() -> void:
 	await get_tree().create_timer(dash_time + 0.05).timeout
 	if is_instance_valid($CollisionShape2D):
 		$CollisionShape2D.disabled = false
+	if "impulse_scissors" in GameState.synergies:
+		for i in 8:
+			_spawn_cut(Vector2.from_angle(TAU * float(i) / 8.0), global_position, projectile_speed * 0.7, damage * 0.55)
 	dashed.emit()
 	PlatformService.vibrate("short")
 
@@ -196,9 +217,9 @@ func _do_rewind_step(delta: float) -> void:
 		move_and_slide()
 
 func _try_use_consumable() -> void:
-	if "repair_coil" in GameState.items:
+	if "repair_coil" in GameState.items and GameState.life < GameState.LIFE_MAX:
 		GameState.heal(1.0)
-		GameState.items.erase("repair_coil")
+		GameState.remove_item("repair_coil")
 		# Sinergia resorte+bobina: parte de tensión en dash (doc 05).
 		if "spring_jumper" in GameState.items:
 			_dash_cd = 0.0

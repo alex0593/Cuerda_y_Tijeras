@@ -7,6 +7,8 @@ var damage := 10.0
 var bounces_left := 0
 var life := 1.2
 var from := "player"
+var stuck := false
+var _stuck_hit_cd := 0.0
 var _history: Array[Vector2] = []
 
 func setup(p_dir: Vector2, p_speed: float, p_damage: float, p_from: String) -> void:
@@ -30,6 +32,14 @@ func _physics_process(delta: float) -> void:
 	if life <= 0.0:
 		queue_free()
 		return
+	if stuck:
+		_stuck_hit_cd -= delta
+		if _stuck_hit_cd <= 0.0:
+			_stuck_hit_cd = 0.5
+			for enemy in get_tree().get_nodes_in_group("enemy"):
+				if enemy is Node2D and global_position.distance_to((enemy as Node2D).global_position) < 22.0 and enemy.has_method("take_hit"):
+					enemy.take_hit(damage * 0.5, "glue", global_position)
+		return
 	# Sinergia imán+rebotes: retorno agresivo.
 	if from == "player" and "magnet_recovery" in GameState.synergies and life < 0.6:
 		var p := get_tree().get_first_node_in_group("player") as Node2D
@@ -50,9 +60,15 @@ func _on_body(body: Node, normal: Vector2 = Vector2.ZERO) -> void:
 		body.take_hit(damage * mult * GameState.tension_factor(), "cut", global_position)
 		if "taut_thread" in GameState.items and body.has_method("bind"):
 			body.bind(0.8)
+		if "living_stitches" in GameState.synergies and body.has_method("thread_mark"):
+			body.thread_mark(2.0)
 		queue_free()
 	elif from == "player" and body is StaticBody2D:
-		if bounces_left > 0:
+		if "adhesive_orbit" in GameState.synergies:
+			stuck = true
+			life = 3.0
+			_stuck_hit_cd = 0.0
+		elif bounces_left > 0:
 			bounces_left -= 1
 			var bounce_normal := normal if normal.length_squared() > 0.001 else Vector2.UP
 			dir = dir.bounce(bounce_normal).normalized()

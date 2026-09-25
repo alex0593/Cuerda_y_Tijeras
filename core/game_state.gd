@@ -174,8 +174,8 @@ func add_item(item_id: String) -> bool:
 			return false
 	items.append(item_id)
 	_rebuild_inventory()
-	item_added.emit(item_id)
 	_recompute_synergies()
+	item_added.emit(item_id)
 	return true
 
 func remove_item(item_id: String) -> void:

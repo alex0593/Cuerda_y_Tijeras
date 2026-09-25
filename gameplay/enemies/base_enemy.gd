@@ -12,6 +12,8 @@ var weak_point_exposed := false
 var drop_rng_seed := 0
 var _drop_rng := RandomNumberGenerator.new()
 var _bind_left := 0.0
+var _thread_left := 0.0
+var _thread_tick := 0.0
 var _flash := 0.0
 var _telegraph := 0.0
 
@@ -26,7 +28,19 @@ func _physics_process(delta: float) -> void:
 		return
 	_flash = maxf(0.0, _flash - delta)
 	_bind_left = maxf(0.0, _bind_left - delta)
+	if _thread_left > 0.0:
+		_thread_left -= delta
+		_thread_tick -= delta
+		if _thread_tick <= 0.0:
+			_thread_tick = 0.5
+			hp -= 2.0
+			_flash = 0.08
+			if hp <= 0.0:
+				die()
+				return
 	modulate = Color(1, 0.5, 0.5) if _flash > 0.0 else Color.WHITE
+	if "glass_eye" in GameState.items:
+		weak_point_exposed = true
 	if _bind_left > 0.0:
 		velocity = Vector2.ZERO
 		move_and_slide()
@@ -52,6 +66,10 @@ func take_hit(amount: float, _source: String, from_position: Vector2 = Vector2.Z
 
 func bind(t: float) -> void:
 	_bind_left = maxf(_bind_left, t)
+
+func thread_mark(t: float) -> void:
+	_thread_left = maxf(_thread_left, t)
+	_thread_tick = minf(_thread_tick, 0.1)
 
 func die() -> void:
 	GameState.kills += 1

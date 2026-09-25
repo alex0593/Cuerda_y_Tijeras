@@ -27,11 +27,22 @@ func _refresh_inventory() -> void:
 	var amulet: Array = GameState.get_slot_items("amulet")
 	var consumable: Array = GameState.get_slot_items("consumable")
 	inventory_label.text = "A:%s  M:%s  P:%s  C:%d" % [
-		weapon[0] if not weapon.is_empty() else "-",
-		mechanism[0] if not mechanism.is_empty() else "-",
-		amulet[0] if not amulet.is_empty() else "-",
+		_format_items(weapon),
+		_format_items(mechanism),
+		_format_items(amulet),
 		GameState.get_slot_charges("consumable")
 	]
+
+func _format_items(items: Array) -> String:
+	if items.is_empty():
+		return "-"
+	var result := ""
+	for i in items.size():
+		if i > 0:
+			result += " / "
+		var item_id := String(items[i])
+		result += String(SynergyDB.get_item(item_id).get("name", item_id))
+	return result
 
 func _process(_delta: float) -> void:
 	info.text = "Sala %d  ⏱ %ds  ☠ %d  Hilos %d  Llaves %d" % [

@@ -55,7 +55,7 @@ func _pick_enemies(rng: RandomNumberGenerator, budget: int) -> Array:
 	while spent < budget and guard < 10:
 		guard += 1
 		var e: String = pool[rng.randi_range(0, pool.size() - 1)]
-		var cost: int = SynergyDB.get_enemy_cost(e)
+		var cost: int = _enemy_cost(e)
 		if spent + cost <= budget:
 			out.append(e)
 			spent += cost
@@ -63,10 +63,20 @@ func _pick_enemies(rng: RandomNumberGenerator, budget: int) -> Array:
 		out.append("tin_soldier")
 	return out
 
+func _content_db() -> Node:
+	var loop := Engine.get_main_loop()
+	if loop is SceneTree:
+		return (loop as SceneTree).root.get_node_or_null("SynergyDB")
+	return null
+
+func _enemy_cost(enemy_id: String) -> int:
+	var db := _content_db()
+	return db.get_enemy_cost(enemy_id) if db else 1
+
 func enemy_budget(room: Dictionary) -> int:
 	var total := 0
 	for enemy_id in (room.get("enemies", []) as Array):
-		total += SynergyDB.get_enemy_cost(String(enemy_id))
+		total += _enemy_cost(String(enemy_id))
 	return total
 
 func validate_room(room: Dictionary) -> Array[String]:

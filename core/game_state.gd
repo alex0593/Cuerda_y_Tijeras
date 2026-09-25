@@ -17,7 +17,7 @@ const REWIND_MAX_CHARGES := 2
 const REWIND_RECHARGE_TIME := 11.0
 const REWIND_DURATION := 1.75
 const LIFE_MAX := 3.0
-const SLOT_CAPACITY := {"weapon": 1, "mechanism": 1, "amulet": 1, "consumable": 4}
+const SLOT_CAPACITY := {"weapon": 1, "mechanism": 2, "amulet": 2, "consumable": 4}
 
 var tension := TENSION_MAX
 var life := LIFE_MAX

@@ -119,6 +119,7 @@ Para el prototipo:
 - Un espacio de arma.
 - Un espacio de mecanismo.
 - Un espacio de amuleto pasivo.
+- Nota H2: el vertical slice usa dos espacios provisionales de mecanismo y amuleto para hacer alcanzables las sinergias; ver D-002.
 - Un consumible activo.
 
 ### Tipos

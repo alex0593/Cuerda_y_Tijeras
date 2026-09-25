@@ -10,7 +10,7 @@
     "taut_thread": {"name": "Hilo tensado", "description": "El impacto ata brevemente a enemigos pequeños.", "slot": "amulet", "rarity": "común", "tags": ["thread"], "restriction": "none", "effect": "thread_bind", "max_charges": 1, "tension_cost": 1, "bind_time": 0.8},
     "screws_cork": {"name": "Tornillos y corcho", "description": "Los cortes rebotan una vez en las paredes.", "slot": "mechanism", "rarity": "común", "tags": ["bounce"], "restriction": "none", "effect": "wall_bounce", "max_charges": 1, "tension_cost": 0, "bounces": 1},
     "toy_glue": {"name": "Pegamento de juguete", "description": "Fija cortes y les permite atrapar enemigos.", "slot": "amulet", "rarity": "común", "tags": ["glue"], "restriction": "none", "effect": "sticky_trap", "max_charges": 1, "tension_cost": 0, "stick_time": 3.0},
-    "repair_coil": {"name": "Bobina de reparación", "description": "Consumible que recupera un segmento de vida.", "slot": "consumable", "rarity": "común", "tags": ["heal"], "restriction": "full_life", "effect": "heal_segment", "max_charges": 1, "charges": 1, "tension_cost": 0, "heal": 1.0}
+    "repair_coil": {"name": "Bobina de reparación", "description": "Consumible que recupera un segmento de vida.", "slot": "consumable", "rarity": "común", "tags": ["heal"], "restriction": "full_life", "effect": "heal_segment", "max_charges": 2, "charges": 2, "tension_cost": 0, "heal": 1.0}
   },
   "synergies": {
     "impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso", "effect": "dash_attack_wave"},

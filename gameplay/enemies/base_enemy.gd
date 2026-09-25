@@ -38,7 +38,11 @@ func _physics_process(delta: float) -> void:
 func _tick(_delta: float) -> void:
 	pass
 
-func take_hit(amount: float, _source: String) -> void:
+func adjust_damage(amount: float, _from_position: Vector2) -> float:
+	return amount
+
+func take_hit(amount: float, _source: String, from_position: Vector2 = Vector2.ZERO) -> void:
+	amount = adjust_damage(amount, from_position)
 	hp -= amount
 	_flash = 0.12
 	if "glass_eye" in GameState.items:

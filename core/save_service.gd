@@ -68,6 +68,8 @@ func save_run() -> bool:
 		"synergies": GameState.synergies,
 		"rooms_visited": GameState.rooms_visited,
 		"kills": GameState.kills,
+		"threads": GameState.threads,
+		"keys": GameState.keys,
 		"run_time": GameState.run_time,
 		"cause_of_death": GameState.cause_of_death,
 	}

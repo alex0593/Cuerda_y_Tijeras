@@ -47,7 +47,7 @@ func _on_body(body: Node, normal: Vector2 = Vector2.ZERO) -> void:
 		var mult := 1.0
 		if "glass_eye" in GameState.items and body.get("weak_point_exposed"):
 			mult = 1.15
-		body.take_hit(damage * mult * GameState.tension_factor(), "cut")
+		body.take_hit(damage * mult * GameState.tension_factor(), "cut", global_position)
 		if "taut_thread" in GameState.items and body.has_method("bind"):
 			body.bind(0.8)
 		queue_free()

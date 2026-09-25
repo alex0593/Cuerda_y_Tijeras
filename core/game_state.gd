@@ -25,6 +25,8 @@ var generator_version := 1
 var run_time := 0.0
 var rooms_visited := 0
 var kills := 0
+var threads := 0
+var keys := 0
 var items: Array[String] = ["scissors_basic"]
 var synergies: Array[String] = []
 var cause_of_death := ""
@@ -66,6 +68,8 @@ func start_run(p_seed: int = 0) -> void:
 	run_time = 0.0
 	rooms_visited = 0
 	kills = 0
+	threads = 0
+	keys = 0
 	items = ["scissors_basic"]
 	synergies = []
 	cause_of_death = ""
@@ -139,6 +143,13 @@ func add_item(item_id: String) -> void:
 	item_added.emit(item_id)
 	_check_synergies(item_id)
 
+func add_resource(resource_id: String) -> void:
+	match resource_id:
+		"thread":
+			threads += 1
+		"key":
+			keys += 1
+
 func _check_synergies(new_item: String) -> void:
 	var formed: Array[String] = SynergyDB.check_for_item(items, new_item)
 	for s in formed:
@@ -155,6 +166,8 @@ func restore_run(data: Dictionary) -> void:
 	run_time = maxf(0.0, float(data.get("run_time", 0.0)))
 	rooms_visited = maxi(0, int(data.get("rooms_visited", 0)))
 	kills = maxi(0, int(data.get("kills", 0)))
+	threads = maxi(0, int(data.get("threads", 0)))
+	keys = maxi(0, int(data.get("keys", 0)))
 	items = ["scissors_basic"]
 	var saved_items: Array = data.get("items", [])
 	for item_id in saved_items:

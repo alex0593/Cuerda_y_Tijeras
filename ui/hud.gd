@@ -19,7 +19,9 @@ func _ready() -> void:
 	rewind_label.text = "⟲ x%d" % GameState.rewind_charges
 
 func _process(_delta: float) -> void:
-	info.text = "Sala %d  ⏱ %ds  ☠ %d" % [GameState.rooms_visited, int(GameState.run_time), GameState.kills]
+	info.text = "Sala %d  ⏱ %ds  ☠ %d  Hilos %d  Llaves %d" % [
+		GameState.rooms_visited, int(GameState.run_time), GameState.kills, GameState.threads, GameState.keys
+	]
 
 func _on_synergy(sid: String) -> void:
 	var d: Dictionary = SynergyDB.SYNERGIES.get(sid, {})

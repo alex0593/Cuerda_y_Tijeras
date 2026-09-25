@@ -26,3 +26,9 @@ z_index = 2
 points = PackedVector2Array(0, 0, 0, 100)
 width = 4.0
 default_color = Color(1, 0.75, 0.2, 0.75)
+
+[node name="Shield" type="Line2D" parent="."]
+z_index = 1
+points = PackedVector2Array(14, -12, 18, 0, 14, 12)
+width = 3.0
+default_color = Color(0.65, 0.72, 0.78, 0.9)

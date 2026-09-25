@@ -22,5 +22,5 @@ func _on_body(body: Node) -> void:
 	if kind.begins_with("item:"):
 		GameState.add_item(kind.trim_prefix("item:"))
 	else:
-		GameState.rooms_visited += 0 # placeholder economía hilos
+		GameState.add_resource(kind)
 	queue_free()

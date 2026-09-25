@@ -29,6 +29,9 @@ show_percentage = false
 [node name="Rewind" type="Label" parent="Top/Left"]
 text = "⟲ x2"
 
+[node name="Inventory" type="Label" parent="Top/Left"]
+text = "A:-  M:-  P:-  C:0"
+
 [node name="Right" type="VBoxContainer" parent="Top"]
 size_flags_horizontal = 3
 

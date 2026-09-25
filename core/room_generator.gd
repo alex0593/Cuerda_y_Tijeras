@@ -4,13 +4,6 @@ extends Node
 
 const GENERATOR_VERSION := 1
 
-const ENEMY_COST := {
-	"tin_soldier": 1,
-	"music_box": 2,
-	"rag_bear": 3,
-	"puppet_shadow": 2,
-}
-
 const VERTICAL_SLICE_FLOW := ["start", "combat", "treasure", "risk", "workshop", "boss"]
 
 func generate_run(p_seed: int) -> Dictionary:
@@ -62,7 +55,7 @@ func _pick_enemies(rng: RandomNumberGenerator, budget: int) -> Array:
 	while spent < budget and guard < 10:
 		guard += 1
 		var e: String = pool[rng.randi_range(0, pool.size() - 1)]
-		var cost: int = ENEMY_COST.get(e, 1)
+		var cost: int = SynergyDB.get_enemy_cost(e)
 		if spent + cost <= budget:
 			out.append(e)
 			spent += cost
@@ -73,7 +66,7 @@ func _pick_enemies(rng: RandomNumberGenerator, budget: int) -> Array:
 func enemy_budget(room: Dictionary) -> int:
 	var total := 0
 	for enemy_id in (room.get("enemies", []) as Array):
-		total += int(ENEMY_COST.get(enemy_id, 1))
+		total += SynergyDB.get_enemy_cost(String(enemy_id))
 	return total
 
 func validate_room(room: Dictionary) -> Array[String]:

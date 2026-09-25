@@ -13,13 +13,12 @@
     "repair_coil": {"name": "Bobina de reparación", "slot": "consumable", "tags": ["heal"], "tension_cost": 0, "heal": 1.0, "charges": 1}
   },
   "synergies": {
-    "impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso"},
-    "living_stitches": {"needs": ["scissors_precision", "taut_thread"], "name": "Puntadas vivas"},
-    "magnet_recovery": {"needs": ["iron_magnet", "screws_cork"], "name": "Recuperación magnética"},
-    "clock_rhythm": {"needs": ["music_box", "spring_jumper"], "name": "Ritmo de reloj"},
-    "trapped_notes": {"needs": ["music_box", "taut_thread"], "name": "Notas atrapadas"},
-    "adhesive_orbit": {"needs": ["toy_glue", "screws_cork"], "name": "Órbita adhesiva"},
-    "impulse_repair": {"needs": ["spring_jumper", "repair_coil"], "name": "Reparación con impulso"},
-    "loaded_melody": {"needs": ["iron_magnet", "music_box"], "name": "Melodía cargada"}
+    "impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso", "effect": "dash_attack_wave"},
+    "living_stitches": {"needs": ["scissors_precision", "taut_thread"], "name": "Puntadas vivas", "effect": "thread_trail"},
+    "magnet_recovery": {"needs": ["iron_magnet", "screws_cork"], "name": "Recuperación magnética", "effect": "returning_shots"},
+    "trapped_notes": {"needs": ["music_box", "taut_thread"], "name": "Notas atrapadas", "effect": "pinned_notes"},
+    "revealing_light": {"needs": ["glass_eye", "shadow"], "name": "Luz reveladora", "effect": "reveal_outline"},
+    "adhesive_orbit": {"needs": ["toy_glue", "screws_cork"], "name": "Órbita adhesiva", "effect": "orbiting_traps"},
+    "impulse_repair": {"needs": ["spring_jumper", "repair_coil"], "name": "Reparación con impulso", "effect": "tension_to_dash"}
   }
 }

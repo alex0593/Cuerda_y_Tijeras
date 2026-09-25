@@ -6,6 +6,7 @@ signal tension_changed(value: float)
 signal life_changed(segments: float)
 signal rewind_charges_changed(count: int)
 signal item_added(item_id: String)
+signal inventory_changed
 signal synergy_formed(synergy_id: String)
 signal run_ended(victory: bool)
 
@@ -16,6 +17,7 @@ const REWIND_MAX_CHARGES := 2
 const REWIND_RECHARGE_TIME := 11.0
 const REWIND_DURATION := 1.75
 const LIFE_MAX := 3.0
+const SLOT_CAPACITY := {"weapon": 1, "mechanism": 1, "amulet": 1, "consumable": 4}
 
 var tension := TENSION_MAX
 var life := LIFE_MAX
@@ -28,6 +30,7 @@ var kills := 0
 var threads := 0
 var keys := 0
 var items: Array[String] = ["scissors_basic"]
+var inventory: Dictionary = {}
 var synergies: Array[String] = []
 var cause_of_death := ""
 var is_running := false
@@ -60,6 +63,8 @@ func _process(delta: float) -> void:
 		_invuln_time -= delta
 
 func start_run(p_seed: int = 0) -> void:
+	if SynergyDB.items_data.is_empty():
+		SynergyDB.reload()
 	seed_value = p_seed if p_seed != 0 else randi()
 	generator_version = RoomGenerator.GENERATOR_VERSION
 	tension = TENSION_MAX
@@ -71,6 +76,7 @@ func start_run(p_seed: int = 0) -> void:
 	threads = 0
 	keys = 0
 	items = ["scissors_basic"]
+	_rebuild_inventory()
 	synergies = []
 	cause_of_death = ""
 	is_running = true
@@ -136,12 +142,46 @@ func try_consume_rewind() -> bool:
 		_rewind_cooldown = REWIND_RECHARGE_TIME
 	return true
 
-func add_item(item_id: String) -> void:
-	if item_id in items:
-		return
+func _rebuild_inventory() -> void:
+	inventory = {"weapon": [], "mechanism": [], "amulet": [], "consumable": []}
+	for item_id in items:
+		var slot := String(SynergyDB.get_item(item_id).get("slot", ""))
+		if slot in inventory:
+			var slot_items: Array = inventory[slot]
+			slot_items.append(item_id)
+	inventory_changed.emit()
+
+func get_slot_items(slot: String) -> Array:
+	return (inventory.get(slot, []) as Array).duplicate()
+
+func add_item(item_id: String) -> bool:
+	if (item_id in items):
+		return false
+	var item_data := SynergyDB.get_item(item_id)
+	if item_data.is_empty():
+		push_error("Objeto desconocido: %s" % item_id)
+		return false
+	var slot := String(item_data.get("slot", ""))
+	var slot_items: Array = inventory.get(slot, [])
+	var capacity := int(SLOT_CAPACITY.get(slot, 0))
+	if capacity <= 0:
+		push_error("Objeto sin slot válido: %s" % item_id)
+		return false
+	if slot_items.size() >= capacity:
+		if slot == "weapon" and not slot_items.is_empty():
+			items.erase(String(slot_items[0]))
+		else:
+			return false
 	items.append(item_id)
+	_rebuild_inventory()
 	item_added.emit(item_id)
-	_check_synergies(item_id)
+	_recompute_synergies()
+	return true
+
+func remove_item(item_id: String) -> void:
+	items.erase(item_id)
+	_rebuild_inventory()
+	_recompute_synergies()
 
 func add_resource(resource_id: String) -> void:
 	match resource_id:
@@ -150,12 +190,16 @@ func add_resource(resource_id: String) -> void:
 		"key":
 			keys += 1
 
-func _check_synergies(new_item: String) -> void:
-	var formed: Array[String] = SynergyDB.check_for_item(items, new_item)
-	for s in formed:
-		if not s in synergies:
-			synergies.append(s)
-			synergy_formed.emit(s)
+func _recompute_synergies() -> void:
+	var next: Array[String] = []
+	for item_id in items:
+		for synergy_id in SynergyDB.check_for_item(items, String(item_id)):
+			if not (synergy_id in next):
+				next.append(synergy_id)
+	for synergy_id in next:
+		if not (synergy_id in synergies):
+			synergy_formed.emit(synergy_id)
+	synergies = next
 
 func restore_run(data: Dictionary) -> void:
 	start_run(int(data.get("seed", 0)))
@@ -172,14 +216,15 @@ func restore_run(data: Dictionary) -> void:
 	var saved_items: Array = data.get("items", [])
 	for item_id in saved_items:
 		var id := String(item_id)
-		if id in items or SynergyDB.get_item(id).is_empty():
+		if (id in items) or SynergyDB.get_item(id).is_empty():
 			continue
 		items.append(id)
+	_rebuild_inventory()
 	synergies = []
 	var saved_synergies: Array = data.get("synergies", [])
 	for synergy_id in saved_synergies:
 		var sid := String(synergy_id)
-		if SynergyDB.SYNERGIES.has(sid) and not sid in synergies:
+		if not SynergyDB.get_synergy(sid).is_empty() and not (sid in synergies):
 			synergies.append(sid)
 	cause_of_death = String(data.get("cause_of_death", ""))
 	tension_changed.emit(tension)

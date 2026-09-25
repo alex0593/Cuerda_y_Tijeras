@@ -1,60 +1,118 @@
-# SynergyDB — datos de objetos y sinergias (doc 05).
-# Los números son de prueba. Balance en content/items.json (fuente editable).
+# SynergyDB — fuente runtime de objetos, sinergias y enemigos.
+# La fuente editable es content/*.json; no se duplican balances en este archivo.
 extends Node
 
-const ITEMS := {
-	"scissors_basic": {"name": "Tijeras de taller", "slot": "weapon", "tags": ["cut"], "tension_cost": 4.0, "damage": 10.0, "fire_interval": 0.30, "projectile_speed": 420.0},
-	"scissors_precision": {"name": "Tijeras de precisión", "slot": "weapon", "tags": ["cut", "precision"], "tension_cost": 4.0, "damage": 10.0, "fire_interval": 0.28, "projectile_speed": 460.0},
-	"spring_jumper": {"name": "Resorte saltador", "slot": "mechanism", "tags": ["movement", "spring"], "tension_cost": 2.0, "dash_bonus": 40.0},
-	"iron_magnet": {"name": "Imán de hierro", "slot": "mechanism", "tags": ["magnet", "metal"], "tension_cost": 0.0, "pickup_radius": 96.0},
-	"music_box": {"name": "Caja de música", "slot": "amulet", "tags": ["music"], "tension_cost": 1.0, "orbit_damage": 8.0, "orbit_time": 3.0},
-	"glass_eye": {"name": "Ojo de vidrio", "slot": "amulet", "tags": ["light", "reveal"], "tension_cost": 0.0, "crit_bonus": 0.15},
-	"taut_thread": {"name": "Hilo tensado", "slot": "amulet", "tags": ["thread"], "tension_cost": 1.0, "bind_time": 0.8},
-	"screws_cork": {"name": "Tornillos y corcho", "slot": "mechanism", "tags": ["bounce"], "tension_cost": 0.0, "bounces": 1},
-	"toy_glue": {"name": "Pegamento de juguete", "slot": "amulet", "tags": ["glue"], "tension_cost": 0.0, "stick_time": 3.0},
-	"repair_coil": {"name": "Bobina de reparación", "slot": "consumable", "tags": ["heal"], "tension_cost": 0.0, "heal": 1.0, "charges": 1},
-}
-
-# sinergia_id -> {needs: [item_a, item_b], name, effect}
-const SYNERGIES := {
-	"impulse_scissors": {"needs": ["scissors_precision", "spring_jumper"], "name": "Tijeras de impulso", "effect": "dash_attack_wave"},
-	"living_stitches": {"needs": ["scissors_precision", "taut_thread"], "name": "Puntadas vivas", "effect": "thread_trail"},
-	"magnet_recovery": {"needs": ["iron_magnet", "screws_cork"], "name": "Recuperación magnética", "effect": "returning_shots"},
-	"clock_rhythm": {"needs": ["music_box", "spring_jumper"], "name": "Ritmo de reloj", "effect": "orbit_speed_dash"},
-	"trapped_notes": {"needs": ["music_box", "taut_thread"], "name": "Notas atrapadas", "effect": "pinned_notes"},
-	"revealing_light": {"needs": ["glass_eye", "shadow"], "name": "Luz reveladora", "effect": "reveal_outline"},
-	"adhesive_orbit": {"needs": ["toy_glue", "screws_cork"], "name": "Órbita adhesiva", "effect": "orbiting_traps"},
-	"impulse_repair": {"needs": ["spring_jumper", "repair_coil"], "name": "Reparación con impulso", "effect": "tension_to_dash"},
-	"loaded_melody": {"needs": ["iron_magnet", "music_box"], "name": "Melodía cargada", "effect": "wide_orbit_damage"},
-}
-
+const ITEMS_PATH := "res://content/items.json"
+const ENEMIES_PATH := "res://content/enemies.json"
 const MAX_RELATIONS_PER_ITEM := 2
 
+var items_data: Dictionary = {}
+var synergies_data: Dictionary = {}
+var enemies_data: Dictionary = {}
+var content_errors: Array[String] = []
+
+func _ready() -> void:
+	reload()
+
+func reload() -> bool:
+	content_errors.clear()
+	_load_items()
+	_load_enemies()
+	return content_errors.is_empty()
+
+func _load_items() -> void:
+	var parsed := _read_json(ITEMS_PATH)
+	if parsed.is_empty():
+		content_errors.append("No se pudo leer %s" % ITEMS_PATH)
+		return
+	var raw_items: Variant = parsed.get("items")
+	var raw_synergies: Variant = parsed.get("synergies")
+	if not (raw_items is Dictionary) or not (raw_synergies is Dictionary):
+		content_errors.append("items.json requiere los mapas items y synergies")
+		return
+	items_data = _copy_dictionary(raw_items)
+	synergies_data = _copy_dictionary(raw_synergies)
+
+func _load_enemies() -> void:
+	var parsed := _read_json(ENEMIES_PATH)
+	if parsed.is_empty():
+		content_errors.append("No se pudo leer %s" % ENEMIES_PATH)
+		return
+	var raw_enemies: Variant = parsed.get("enemies")
+	if not (raw_enemies is Dictionary):
+		content_errors.append("enemies.json requiere el mapa enemies")
+		return
+	enemies_data = _copy_dictionary(raw_enemies)
+
+func _copy_dictionary(source) -> Dictionary:
+	var copy: Dictionary = {}
+	for key in source.keys():
+		copy[key] = source[key]
+	return copy
+
+func _read_json(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	return parsed if parsed is Dictionary else {}
+
 func get_item(item_id: String) -> Dictionary:
-	return ITEMS.get(item_id, {})
+	return items_data.get(item_id, {})
+
+func get_synergy(synergy_id: String) -> Dictionary:
+	return synergies_data.get(synergy_id, {})
+
+func get_enemy(enemy_id: String) -> Dictionary:
+	return enemies_data.get(enemy_id, {})
+
+func get_enemy_cost(enemy_id: String) -> int:
+	return int(get_enemy(enemy_id).get("cost", 1))
 
 func check_for_item(owned: Array, new_item: String) -> Array[String]:
-	var out: Array[String] = []
-	for sid in SYNERGIES.keys():
-		var needs: Array = SYNERGIES[sid]["needs"]
-		if new_item in needs:
-			var other: String = needs[0] if needs[1] == new_item else needs[1]
-			# "shadow" es etiqueta/enemigo, no objeto: no se forma por inventario.
-			if other == "shadow":
-				continue
-			if other in owned and not sid in out:
-				out.append(sid)
-	return out
+	var formed: Array[String] = []
+	for sid in synergies_data.keys():
+		var definition: Dictionary = synergies_data[sid]
+		var needs: Array = definition.get("needs", [])
+		if needs.size() != 2 or not (new_item in needs):
+			continue
+		var other := String(needs[0] if String(needs[1]) == new_item else needs[1])
+		# "shadow" es una interacción especial, no un objeto de inventario.
+		if other == "shadow":
+			continue
+		if other in owned:
+			formed.append(String(sid))
+	return formed
 
 func validate_content() -> Array[String]:
-	var errors: Array[String] = []
-	for sid in SYNERGIES.keys():
-		var needs: Array = SYNERGIES[sid]["needs"]
-		for n in needs:
-			if n != "shadow" and not n in ITEMS:
-				errors.append("synergy %s needs unknown item %s" % [sid, n])
-	for iid in ITEMS.keys():
-		var d: Dictionary = ITEMS[iid]
-		if not d.has("slot") or not d.has("tags"):
-			errors.append("item %s missing slot/tags" % iid)
+	var errors: Array[String] = content_errors.duplicate()
+	if items_data.is_empty():
+		errors.append("items_data está vacío")
+	if synergies_data.is_empty():
+		errors.append("synergies_data está vacío")
+	for item_id in items_data.keys():
+		var item: Dictionary = items_data[item_id]
+		if not item.has("name") or not item.has("slot") or not item.has("tags"):
+			errors.append("objeto %s incompleto" % item_id)
+		if not (String(item.get("slot", "")) in ["weapon", "mechanism", "amulet", "consumable"]):
+			errors.append("objeto %s tiene slot inválido" % item_id)
+	var relation_counts := {}
+	for synergy_id in synergies_data.keys():
+		var definition: Dictionary = synergies_data[synergy_id]
+		var needs: Array = definition.get("needs", [])
+		if needs.size() != 2:
+			errors.append("sinergia %s debe tener exactamente dos requisitos" % synergy_id)
+		for required in needs:
+			var id := String(required)
+			if id != "shadow" and get_item(id).is_empty():
+				errors.append("sinergia %s requiere objeto desconocido %s" % [synergy_id, id])
+			if id != "shadow":
+				relation_counts[id] = int(relation_counts.get(id, 0)) + 1
+	for item_id in relation_counts.keys():
+		if int(relation_counts[item_id]) > MAX_RELATIONS_PER_ITEM:
+			errors.append("objeto %s supera %d relaciones" % [item_id, MAX_RELATIONS_PER_ITEM])
+	for enemy_id in enemies_data.keys():
+		var enemy: Dictionary = enemies_data[enemy_id]
+		if not enemy.has("name") or not enemy.has("hp") or not enemy.has("cost"):
+			errors.append("enemigo %s incompleto" % enemy_id)
 	return errors

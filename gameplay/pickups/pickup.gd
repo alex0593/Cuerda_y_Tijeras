@@ -43,8 +43,10 @@ func _physics_process(delta: float) -> void:
 func _on_body(body: Node) -> void:
 	if not body.is_in_group("player"):
 		return
+	var consumed := true
 	if kind.begins_with("item:"):
-		GameState.add_item(kind.trim_prefix("item:"))
+		consumed = GameState.add_item(kind.trim_prefix("item:"))
 	else:
 		GameState.add_resource(kind)
-	queue_free()
+	if consumed:
+		queue_free()

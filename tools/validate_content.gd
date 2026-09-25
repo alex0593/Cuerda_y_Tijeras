@@ -4,6 +4,7 @@ extends SceneTree
 func _init() -> void:
 	var err := 0
 	var syn = load("res://core/synergy_db.gd").new()
+	syn.reload()
 	var gen = load("res://core/room_generator.gd").new()
 	for e in syn.validate_content():
 		push_error(e)

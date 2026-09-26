@@ -2,7 +2,7 @@
 # Grafo pequeño para vertical slice: inicio -> combate -> tesoro/riesgo -> taller -> jefe.
 extends Node
 
-const GENERATOR_VERSION := 2
+const GENERATOR_VERSION := 3
 
 const VERTICAL_SLICE_FLOW := ["start", "combat", "treasure", "risk", "combat", "workshop", "boss"]
 
@@ -51,7 +51,25 @@ func _make_room(rng: RandomNumberGenerator, index: int, kind: String) -> Diction
 			room["enemies"] = ["caja_cero"]
 	# Las salas de recompensa ofrecen objetos reales; el resto, nada.
 	room["offers"] = _pick_item_offers(rng, REWARD_OFFER_COUNT) if kind in REWARD_ROOM_KINDS else []
+	# Botín de hilos en el suelo: la moneda de la partida (content/economy.json).
+	room["loot"] = _roll_loot(rng, kind)
+	# El jefe siempre suelta un objeto del catálogo (decisión 2026-09-25).
+	room["boss_drop"] = _pick_boss_drop(rng) if kind == "boss" else ""
 	return room
+
+# Hilos que la sala deja en el suelo; el rango vive en content/economy.json.
+func _roll_loot(rng: RandomNumberGenerator, kind: String) -> Array:
+	var limits := _loot_range(kind)
+	if int(limits[0]) < 0:
+		return []  # validate_room lo denuncia
+	var loot: Array = []
+	for i in rng.randi_range(int(limits[0]), int(limits[1])):
+		loot.append("thread")
+	return loot
+
+func _pick_boss_drop(rng: RandomNumberGenerator) -> String:
+	var drops: Array = _pick_item_offers(rng, 1)
+	return String(drops[0]) if not drops.is_empty() else ""
 
 # Selección ponderada por rareza y sin repetir dentro de la misma sala.
 # Devuelve identificadores estables de content/items.json, nunca balances hardcodeados.
@@ -127,6 +145,10 @@ func _item(item_id: String) -> Dictionary:
 	var db := _content_db()
 	return db.get_item(item_id) if db else {}
 
+func _loot_range(kind: String) -> Array:
+	var db := _content_db()
+	return db.get_loot_range(kind) if db else [-1, -1]
+
 func enemy_budget(room: Dictionary) -> int:
 	var total := 0
 	for enemy_id in (room.get("enemies", []) as Array):
@@ -156,6 +178,24 @@ func validate_room(room: Dictionary) -> Array[String]:
 	for item_id in offers:
 		if _item(String(item_id)).is_empty():
 			errors.append("reward room ofrece objeto desconocido %s" % item_id)
+	# Botín de hilos: cantidad dentro del rango de content/economy.json.
+	var limits := _loot_range(kind)
+	if int(limits[0]) < 0:
+		errors.append("economy.json no define loot para %s" % kind)
+	else:
+		var loot: Array = room.get("loot", [])
+		if loot.size() < int(limits[0]) or loot.size() > int(limits[1]):
+			errors.append("sala %d debe soltar entre %d y %d hilos" % [int(room.get("index", -1)), int(limits[0]), int(limits[1])])
+		for resource_id in loot:
+			if not (String(resource_id) in ["thread", "key"]):
+				errors.append("sala %d suelta recurso desconocido %s" % [int(room.get("index", -1)), resource_id])
+	# El jefe suelta siempre un objeto alcanzable y distinto del arma inicial.
+	var boss_drop := String(room.get("boss_drop", ""))
+	if kind == "boss":
+		if boss_drop == "" or _item(boss_drop).is_empty() or boss_drop in NON_REWARD_ITEMS:
+			errors.append("boss_drop debe ser un objeto del catálogo distinto del inicial")
+	elif boss_drop != "":
+		errors.append("solo la sala de jefe define boss_drop")
 	return errors
 
 func _unique_count(values: Array) -> int:

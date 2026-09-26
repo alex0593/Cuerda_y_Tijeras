@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="3"]
 [ext_resource type="Script" path="res://gameplay/rooms/room.gd" id="4"]
 [ext_resource type="Script" path="res://ui/swap_panel.gd" id="5"]
+[ext_resource type="Script" path="res://ui/shop_panel.gd" id="6"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1")
@@ -19,6 +20,9 @@ enabled = true
 
 [node name="SwapPanel" type="CanvasLayer" parent="."]
 script = ExtResource("5")
+
+[node name="ShopPanel" type="CanvasLayer" parent="."]
+script = ExtResource("6")
 
 [node name="PauseOverlay" type="CanvasLayer" parent="."]
 visible = false

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "loot": {
+    "start": [0, 0],
+    "combat": [2, 4],
+    "treasure": [2, 3],
+    "risk": [3, 5],
+    "workshop": [2, 3],
+    "boss": [0, 0]
+  },
+  "prices": {"común": 5, "especial": 8, "rara": 12},
+  "shop": {"repair_cost": 6, "repair_amount": 1.0}
+}

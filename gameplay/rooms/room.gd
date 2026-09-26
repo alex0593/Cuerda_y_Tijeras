@@ -152,6 +152,10 @@ func _spawn_enemies() -> void:
 		if e == null:
 			continue
 		e.set("drop_rng_seed", room_seed + i * 7919)
+		# El jefe siempre suelta un objeto del catálogo (botín de sala de jefe).
+		var boss_drop := String(room_data.get("boss_drop", ""))
+		if not boss_drop.is_empty() and eid == "caja_cero":
+			e.set("guaranteed_drop", "item:%s" % boss_drop)
 		add_child(e)
 		e.position = points[i % points.size()]
 		spawned.append(e)

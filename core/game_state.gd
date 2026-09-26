@@ -243,6 +243,95 @@ func swap_item(new_item_id: String, replaced_item_id: String) -> bool:
 	item_added.emit(new_item_id)
 	return true
 
+# --- Compras del taller (doc 07 §13): los hilos solo se gastan al confirmar. ---
+
+# Explica si un objeto se puede comprar ahora y, si el slot está lleno,
+# qué se podría reemplazar. No modifica estado.
+func get_buy_info(item_id: String) -> Dictionary:
+	var price := SynergyDB.get_price(item_id)
+	var result := {"allowed": false, "reason": "", "price": price, "needs_swap": false, "candidates": []}
+	if price <= 0:
+		result["reason"] = "no está a la venta"
+		return result
+	if not is_running:
+		result["reason"] = "sin partida en curso"
+		return result
+	var permission := can_add_item(item_id)
+	if not bool(permission["allowed"]):
+		result["reason"] = permission["reason"]
+		return result
+	if threads < price:
+		result["reason"] = "faltan hilos"
+		return result
+	var item_data := SynergyDB.get_item(item_id)
+	if item_id in items:
+		# Un objeto ya equipado no se compra dos veces; los consumibles sí
+		# se reponen mientras queden cargas.
+		if String(item_data.get("slot", "")) != "consumable":
+			result["reason"] = "ya lo llevas"
+			return result
+		if int(item_charges.get(item_id, 1)) >= int(item_data.get("max_charges", 1)):
+			result["reason"] = "cargas al máximo"
+			return result
+		result["allowed"] = true
+		return result
+	var slot := String(item_data.get("slot", ""))
+	var slot_items: Array = inventory.get(slot, [])
+	if slot_items.size() >= int(SLOT_CAPACITY.get(slot, 0)):
+		result["needs_swap"] = true
+		result["candidates"] = slot_items
+		return result
+	result["allowed"] = true
+	return result
+
+# Compra un objeto. Con slot lleno hay que indicar a quién reemplazar;
+# los hilos solo se descuentan cuando el objeto acaba entrando.
+func buy_item(item_id: String, replaced_item_id: String = "") -> Dictionary:
+	var info := get_buy_info(item_id)
+	var failure := {"ok": false, "reason": String(info.get("reason", "no se puede llevar")), "needs_swap": false, "candidates": []}
+	if not bool(info.get("needs_swap", false)):
+		if not bool(info.get("allowed", false)):
+			return failure
+		if not add_item(item_id):
+			return failure
+	else:
+		if replaced_item_id == "":
+			failure["needs_swap"] = true
+			failure["candidates"] = info.get("candidates", [])
+			failure["reason"] = ""
+			return failure
+		if not swap_item(item_id, replaced_item_id):
+			return failure
+	threads -= int(info.get("price", 0))
+	return {"ok": true, "reason": "", "needs_swap": false, "candidates": []}
+
+func get_repair_info() -> Dictionary:
+	var cost := SynergyDB.get_repair_cost()
+	var result := {"allowed": false, "reason": "", "cost": cost}
+	if not is_running:
+		result["reason"] = "sin partida en curso"
+		return result
+	if life >= LIFE_MAX:
+		result["reason"] = "la vida ya está llena"
+		return result
+	if cost <= 0:
+		result["reason"] = "no está a la venta"
+		return result
+	if threads < cost:
+		result["reason"] = "faltan hilos"
+		return result
+	result["allowed"] = true
+	return result
+
+# Repara vida a cambio de hilos; el importe vive en content/economy.json.
+func buy_repair() -> bool:
+	var info := get_repair_info()
+	if not bool(info["allowed"]):
+		return false
+	threads -= int(info["cost"])
+	heal(SynergyDB.get_repair_amount())
+	return true
+
 func consume_item(item_id: String, amount: int = 1) -> bool:
 	if not (item_id in items) or amount <= 0:
 		return false

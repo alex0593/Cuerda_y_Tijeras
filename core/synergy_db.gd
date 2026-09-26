@@ -4,11 +4,14 @@ extends Node
 
 const ITEMS_PATH := "res://content/items.json"
 const ENEMIES_PATH := "res://content/enemies.json"
+const ECONOMY_PATH := "res://content/economy.json"
 const MAX_RELATIONS_PER_ITEM := 2
+const RARITIES := ["común", "especial", "rara"]
 
 var items_data: Dictionary = {}
 var synergies_data: Dictionary = {}
 var enemies_data: Dictionary = {}
+var economy_data: Dictionary = {}
 var content_errors: Array[String] = []
 
 func _ready() -> void:
@@ -18,6 +21,7 @@ func reload() -> bool:
 	content_errors.clear()
 	_load_items()
 	_load_enemies()
+	_load_economy()
 	return content_errors.is_empty()
 
 func _load_items() -> void:
@@ -44,6 +48,13 @@ func _load_enemies() -> void:
 		return
 	enemies_data = _copy_dictionary(raw_enemies)
 
+func _load_economy() -> void:
+	var parsed := _read_json(ECONOMY_PATH)
+	if parsed.is_empty():
+		content_errors.append("No se pudo leer %s" % ECONOMY_PATH)
+		return
+	economy_data = _copy_dictionary(parsed)
+
 func _copy_dictionary(source) -> Dictionary:
 	var copy: Dictionary = {}
 	for key in source.keys():
@@ -68,6 +79,32 @@ func get_enemy(enemy_id: String) -> Dictionary:
 
 func get_enemy_cost(enemy_id: String) -> int:
 	return int(get_enemy(enemy_id).get("cost", 1))
+
+# --- Economía de la partida (doc 07 §12): todo desde content/economy.json.
+
+func get_price(item_id: String) -> int:
+	var rarity := String(get_item(item_id).get("rarity", "común"))
+	return int(_map(economy_data.get("prices", {})).get(rarity, 0))
+
+func get_repair_cost() -> int:
+	return int(_map(economy_data.get("shop", {})).get("repair_cost", 0))
+
+func get_repair_amount() -> float:
+	return float(_map(economy_data.get("shop", {})).get("repair_amount", 0.0))
+
+# Rango [mín, máx] de hilos que suelta una sala; [-1, -1] si el tipo no existe.
+func get_loot_range(room_kind: String) -> Array:
+	var value = _map(economy_data.get("loot", {})).get(room_kind, null)
+	if not (value is Array) or (value as Array).size() != 2:
+		return [-1, -1]
+	var lo := int(value[0])
+	var hi := int(value[1])
+	if lo < 0 or hi < lo:
+		return [-1, -1]
+	return [lo, hi]
+
+func _map(value) -> Dictionary:
+	return value if value is Dictionary else {}
 
 func check_for_item(owned: Array, new_item: String) -> Array[String]:
 	var formed: Array[String] = []
@@ -122,4 +159,22 @@ func validate_content() -> Array[String]:
 		var enemy: Dictionary = enemies_data[enemy_id]
 		if not enemy.has("name") or not enemy.has("hp") or not enemy.has("cost"):
 			errors.append("enemigo %s incompleto" % enemy_id)
+	if economy_data.is_empty():
+		errors.append("economy_data está vacío")
+	else:
+		var prices := _map(economy_data.get("prices", {}))
+		for rarity in RARITIES:
+			if int(prices.get(rarity, 0)) <= 0:
+				errors.append("economy.json necesita precio positivo para %s" % rarity)
+		if get_repair_cost() <= 0:
+			errors.append("economy.json necesita repair_cost positivo")
+		if get_repair_amount() <= 0.0:
+			errors.append("economy.json necesita repair_amount positivo")
+		var loot := _map(economy_data.get("loot", {}))
+		if loot.is_empty():
+			errors.append("economy.json requiere el mapa loot")
+		for room_kind in loot.keys():
+			var limits := get_loot_range(String(room_kind))
+			if int(limits[0]) < 0:
+				errors.append("economy.json loot %s no es un rango [mín, máx] válido" % room_kind)
 	return errors

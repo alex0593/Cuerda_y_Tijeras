@@ -10,6 +10,7 @@ var _run_serial := 0
 @onready var hud: CanvasLayer = $HUD
 @onready var touch: CanvasLayer = $TouchControls
 @onready var swap_panel: CanvasLayer = $SwapPanel
+@onready var shop_panel: CanvasLayer = $ShopPanel
 
 func _ready() -> void:
 	# El coordinator debe seguir recibiendo entrada mientras el árbol está pausado
@@ -20,8 +21,11 @@ func _ready() -> void:
 	_start_new_run(randi())
 
 func _on_swap_requested(pickup: Node, new_item_id: String, candidates: Array) -> void:
-	# Solo tiene sentido cambiar objetos con la partida en curso.
+	# Solo tiene sentido cambiar objetos con la partida en curso y sin otro
+	# panel decidido encima (el taller ya está congelando la partida).
 	if not GameState.is_running or not is_instance_valid(swap_panel):
+		return
+	if _panel_open():
 		return
 	swap_panel.call("open", pickup, new_item_id, candidates)
 
@@ -46,6 +50,10 @@ func _spawn_current() -> void:
 	_transitioning = false
 	var data: Dictionary = (flow["rooms"] as Array)[room_index]
 	var room := preload("res://gameplay/rooms/room.tscn").instantiate()
+	# Main es ALWAYS para poder cerrar pausas, pero la sala con su jugador,
+	# enemigos y botín debe ser pausable: si hereda ALWAYS, los paneles y la
+	# pausa congelan la interfaz y no la partida (doc 07 §13).
+	room.process_mode = Node.PROCESS_MODE_PAUSABLE
 	# Configurar y conectar antes de add_child: _ready() se ejecuta al entrar al árbol.
 	room.setup(data)
 	room.cleared.connect(_on_room_cleared)
@@ -54,6 +62,9 @@ func _spawn_current() -> void:
 	add_child(room)
 	move_child(room, 0)
 	_drop_offers(data.get("offers", []) as Array)
+	_drop_loot(data.get("loot", []) as Array)
+	if String(data.get("kind", "")) == "workshop":
+		_spawn_shop_station()
 	# Las salas sin enemigos se completan después de añadir sus recompensas.
 	if (data.get("enemies", []) as Array).is_empty():
 		room.call("_mark_cleared")
@@ -73,6 +84,52 @@ func _drop_reward(pos: Vector2, kind: String) -> void:
 	pk.kind = kind
 	current_room.add_child(pk)
 	pk.global_position = pos
+
+# Hilos en el suelo: la moneda de la partida, generada con semilla (doc 07 §12).
+const LOOT_SLOTS: Array[Vector2] = [
+	Vector2(240, 470), Vector2(400, 470), Vector2(560, 470),
+	Vector2(720, 470), Vector2(860, 470),
+]
+
+func _drop_loot(loot: Array) -> void:
+	for i in mini(loot.size(), LOOT_SLOTS.size()):
+		_drop_reward(LOOT_SLOTS[i], String(loot[i]))
+
+# El taller es una estación fija de la sala: tocarla abre la compra (doc 07 §13).
+func _spawn_shop_station() -> void:
+	var station := Area2D.new()
+	station.collision_layer = 16
+	station.collision_mask = 1
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = 56.0
+	shape.shape = circle
+	station.add_child(shape)
+	station.position = Vector2(150, 460)
+
+	var visual := Polygon2D.new()
+	visual.polygon = PackedVector2Array([-44, -30, 44, -30, 44, 30, -44, 30])
+	visual.color = Color(0.55, 0.42, 0.24)
+	station.add_child(visual)
+
+	var label := Label.new()
+	label.text = "TALLER\ntocar para entrar"
+	label.position = Vector2(-80, -92)
+	label.size = Vector2(160, 58)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_color_override("font_color", Color(0.32, 0.24, 0.14))
+	station.add_child(label)
+
+	station.body_entered.connect(_on_shop_station_entered)
+	current_room.add_child(station)
+
+func _on_shop_station_entered(body: Node) -> void:
+	if not body.is_in_group("player"):
+		return
+	if not GameState.is_running or not is_instance_valid(shop_panel):
+		return
+	shop_panel.call("open")
 
 func _on_room_cleared() -> void:
 	if not GameState.is_running or _transitioning:
@@ -132,8 +189,8 @@ func _on_run_ended(victory: bool) -> void:
 		mins, secs, GameState.rooms_visited, GameState.kills, SaveService.export_seed()]
 
 func _process(_delta: float) -> void:
-	# El panel de cambio congela la partida: pausa y reinicio no deben actuar encima.
-	if is_instance_valid(swap_panel) and bool(swap_panel.get("is_open")):
+	# Los paneles congelan la partida: pausa y reinicio no deben actuar encima.
+	if _panel_open():
 		return
 	if ($End as CanvasLayer).visible and Input.is_action_just_pressed("restart"):
 		_start_new_run(randi())
@@ -142,14 +199,21 @@ func _process(_delta: float) -> void:
 		get_tree().paused = not get_tree().paused
 		$PauseOverlay.visible = get_tree().paused
 
+func _panel_open() -> bool:
+	for panel in [swap_panel, shop_panel]:
+		if is_instance_valid(panel) and bool(panel.get("is_open")):
+			return true
+	return false
+
 func _unhandled_input(event: InputEvent) -> void:
 	# En Android el botón atrás cerraba la app y perdía la partida.
-	# Ahora pausa; con el panel abierto, lo cierra.
+	# Ahora pausa; con un panel abierto, lo cierra.
 	if not _is_back_pressed(event):
 		return
-	if is_instance_valid(swap_panel) and bool(swap_panel.get("is_open")):
-		swap_panel.call("_close")
-		return
+	for panel in [swap_panel, shop_panel]:
+		if is_instance_valid(panel) and bool(panel.get("is_open")):
+			panel.call("_close")
+			return
 	if ($End as CanvasLayer).visible:
 		return
 	get_viewport().set_input_as_handled()

@@ -10,6 +10,8 @@ class_name BaseEnemy
 var hp := 20.0
 var weak_point_exposed := false
 var drop_rng_seed := 0
+# Botín garantizado ("item:<id>", "thread"...): el jefe siempre suelta algo.
+var guaranteed_drop := ""
 var _drop_rng := RandomNumberGenerator.new()
 var _bind_left := 0.0
 var _thread_left := 0.0
@@ -77,12 +79,17 @@ func die() -> void:
 	queue_free()
 
 func _drop() -> void:
+	if guaranteed_drop != "":
+		_spawn_pickup(guaranteed_drop, global_position)
 	var roll := _drop_rng.randf()
 	if roll < 0.25:
-		var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
-		pk.kind = "thread" if roll < 0.15 else "key"
-		get_parent().add_child(pk)
-		pk.global_position = global_position
+		_spawn_pickup("thread" if roll < 0.15 else "key", global_position)
+
+func _spawn_pickup(pickup_kind: String, at: Vector2) -> void:
+	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
+	pk.kind = pickup_kind
+	get_parent().add_child(pk)
+	pk.global_position = at
 
 func _try_touch_player() -> void:
 	var p := get_tree().get_first_node_in_group("player") as Node2D

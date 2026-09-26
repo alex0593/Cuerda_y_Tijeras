@@ -32,6 +32,6 @@ El taller tiene que justificar que la jugadora se resigne a gastar el botín de 
 - Plataformas afectadas: todas; la interfaz táctil es la que más lo nota.
 
 ## Revisión
-- **Fecha de revisión:** después del playtest H3 completo
-- **Resultado:**
-- **Nueva decisión relacionada:** D-003
+- **Fecha de revisión:** 2026-09-26 (playtest H3 en el Honor)
+- **Resultado:** sustituida por D-005. El panel del taller y la tercera oferta con llave se retiraron: la compra pasa a ser directa en el suelo, sin objetos gratis en las salas y sin límite de huecos.
+- **Nueva decisión relacionada:** D-005, D-003

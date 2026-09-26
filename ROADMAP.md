@@ -66,6 +66,7 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] La Caja de Cero siempre suelta un objeto del catálogo al morir.
 - [x] Taller con pool exclusiva, 2 ofertas expuestas en la sala, llave para la tercera y reparación (D-004).
 - [x] El overlay de pausa es un espejo del estado real: ya no se queda visible mientras la partida corre.
+- [x] Compra directa en el suelo del taller, sin paneles, sin objetos gratis en las salas y sin límite de huecos (D-005).
 - [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [ ] Caja de Cero con dos fases funcionales y contraestrategias.
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.

@@ -141,10 +141,20 @@ func _run_shop_panel(state: Node) -> void:
 
 	_check(not bool(panel.get("is_open")), "el taller debe arrancar cerrado")
 	state.threads = 20
+	var overlay := scene.get_node_or_null("PauseOverlay") as CanvasLayer
+	_check(overlay != null, "game.tscn debe tener el overlay de pausa")
+
+	# Pausa manual: el overlay es un espejo del estado real de la partida.
+	scene._unhandled_input(_back_event())
+	await process_frame
+	_check(bool(paused) and overlay != null and overlay.visible, "pausar debe mostrar el overlay")
+
+	# El taller se abre por encima de esa pausa: no debe heredar el texto.
 	panel.call("open")
 	await process_frame
 	_check(bool(panel.get("is_open")), "el taller debe abrirse")
 	_check(bool(paused), "el taller debe congelar la partida")
+	_check(overlay != null and not overlay.visible, "el overlay de pausa no debe tapar el taller")
 
 	# El catálogo pinta todos los objetos salvo el arma inicial.
 	var body: Control = panel.get("_body")
@@ -179,6 +189,17 @@ func _run_shop_panel(state: Node) -> void:
 	_check(not bool(panel.get("is_open")), "atrás debe cerrar el taller")
 	_check(not bool(paused), "cerrar el taller debe reanudar la partida")
 	_check(bool(state.is_running), "cerrar el taller no debe perder la partida")
+	_check(overlay != null and not overlay.visible, "cerrar el taller no debe dejar el overlay de pausa pegado")
+
+	# Si algo reanuda por otro camino (p. ej. el cierre de un panel), el texto
+	# de pausa no puede quedarse en pantalla mientras la partida corre.
+	scene._unhandled_input(_back_event())
+	await process_frame
+	_check(bool(paused) and overlay != null and overlay.visible, "pausar de nuevo debe mostrar el overlay")
+	paused = false
+	await process_frame
+	_check(overlay != null and not overlay.visible, "el overlay debe desaparecer al reanudar")
+	_check(not bool(paused), "la partida debe quedar corriendo")
 
 	state.end_run(false)
 	paused = false

@@ -190,14 +190,15 @@ func _on_run_ended(victory: bool) -> void:
 
 func _process(_delta: float) -> void:
 	# Los paneles congelan la partida: pausa y reinicio no deben actuar encima.
-	if _panel_open():
-		return
-	if ($End as CanvasLayer).visible and Input.is_action_just_pressed("restart"):
-		_start_new_run(randi())
-		return
-	if Input.is_action_just_pressed("pause") and not ($End as CanvasLayer).visible:
-		get_tree().paused = not get_tree().paused
-		$PauseOverlay.visible = get_tree().paused
+	if not _panel_open():
+		if ($End as CanvasLayer).visible and Input.is_action_just_pressed("restart"):
+			_start_new_run(randi())
+		elif Input.is_action_just_pressed("pause") and not ($End as CanvasLayer).visible:
+			get_tree().paused = not get_tree().paused
+	# El overlay es un espejo del estado real, nunca una variable aparte: si se
+	# asigna a mano puede quedarse visible mientras la partida corre, o tapar
+	# el taller. Ni con panel abierto ni con el resumen encima.
+	$PauseOverlay.visible = get_tree().paused and not _panel_open() and not ($End as CanvasLayer).visible
 
 func _panel_open() -> bool:
 	for panel in [swap_panel, shop_panel]:

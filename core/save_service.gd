@@ -5,7 +5,7 @@ extends Node
 const PROFILE_PATH := "user://profile.v1.json"
 const SETTINGS_PATH := "user://settings.v1.json"
 const RUN_PATH := "user://partida-a.v1.json"
-const FORMAT_VERSION := 1
+const FORMAT_VERSION := 2
 
 var settings := {
 	"music_volume": 0.8, "sfx_volume": 0.9, "assist_aim": false,
@@ -70,8 +70,8 @@ func save_run() -> bool:
 		"rooms_visited": GameState.rooms_visited,
 		"kills": GameState.kills,
 		"threads": GameState.threads,
-		"keys": GameState.keys,
-		"shop_extra_unlocked": GameState.shop_extra_unlocked,
+		"alfilers": GameState.alfilers,
+		"shop_open": GameState.shop_open,
 		"run_time": GameState.run_time,
 		"cause_of_death": GameState.cause_of_death,
 	}

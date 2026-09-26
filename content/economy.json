@@ -1,20 +1,19 @@
 {
-  "version": 2,
+  "version": 3,
   "loot": {
     "start": [0, 0],
-    "combat": [2, 4],
-    "treasure": [2, 3],
-    "risk": [3, 5],
-    "workshop": [2, 3],
+    "combat": [1, 2],
+    "treasure": [1, 2],
+    "risk": [2, 3],
+    "workshop": [1, 2],
     "boss": [0, 0]
   },
   "prices": {"común": 5, "especial": 8, "rara": 12},
   "shop": {
     "repair_cost": 6,
     "repair_amount": 1.0,
-    "key_cost": 6,
-    "offers": 2,
-    "offers_with_key": 3
+    "entry_cost": 6,
+    "offers": 2
   },
   "shop_pool": ["scissors_precision", "music_box", "glass_eye", "iron_magnet", "toy_glue"]
 }

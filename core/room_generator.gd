@@ -2,15 +2,11 @@
 # Grafo pequeño para vertical slice: inicio -> combate -> tesoro/riesgo -> taller -> jefe.
 extends Node
 
-const GENERATOR_VERSION := 4
+const GENERATOR_VERSION := 5
 
 const VERTICAL_SLICE_FLOW := ["start", "combat", "treasure", "risk", "combat", "workshop", "boss"]
 
-# Reparto de objetos: salas que ofrecen objetos y cuántas opciones dejan en el suelo.
-# La jugadora decide cuáles recoger antes de salir por la puerta.
-const REWARD_ROOM_KINDS := ["combat", "treasure", "risk", "workshop"]
-const REWARD_OFFER_COUNT := 3
-# El arma inicial no se ofrece: solo se conserva o se sustituye.
+# El arma inicial nunca se reparte: solo se conserva o se sustituye.
 const NON_REWARD_ITEMS := ["scissors_basic"]
 # Pesos por rareza, para que lo raro sea raro sin desaparecer del vertical slice.
 const RARITY_WEIGHTS := {"común": 60, "especial": 30, "rara": 10}
@@ -49,10 +45,9 @@ func _make_room(rng: RandomNumberGenerator, index: int, kind: String) -> Diction
 		"boss":
 			room["template"] = "boss_arena"
 			room["enemies"] = ["caja_cero"]
-	# Las salas de recompensa ofrecen objetos reales; el resto, nada.
-	room["offers"] = _pick_item_offers(rng, REWARD_OFFER_COUNT) if kind in REWARD_ROOM_KINDS else []
-	# El taller expone su pool exclusiva: se sortea entera para que la tercera
-	# oferta no cambie cuando se desbloquea con una llave (doc 07 §13).
+	# Ninguna sala regala objetos: solo hilos en el suelo. Los objetos salen del
+	# jefe y de la tienda del taller (doc 07 §12.1 y §13).
+	# El taller expone su pool exclusiva, sorteada con la semilla.
 	room["shop_offers"] = _pick_shop_offers(rng) if kind == "workshop" else []
 	# Botín de hilos en el suelo: la moneda de la partida (content/economy.json).
 	room["loot"] = _roll_loot(rng, kind)
@@ -70,20 +65,16 @@ func _roll_loot(rng: RandomNumberGenerator, kind: String) -> Array:
 		loot.append("thread")
 	return loot
 
+# El jefe suelta un objeto del catálogo que no sea de la pool del taller:
+# lo especial se compra en la tienda y lo común lo regala el jefe (doc 07 §13).
 func _pick_boss_drop(rng: RandomNumberGenerator) -> String:
-	var drops: Array = _pick_item_offers(rng, 1)
-	return String(drops[0]) if not drops.is_empty() else ""
-
-# Selección ponderada por rareza y sin repetir dentro de la misma sala.
-# Devuelve identificadores estables de content/items.json, nunca balances hardcodeados.
-func _pick_item_offers(rng: RandomNumberGenerator, count: int) -> Array:
 	var pool: Array = []
 	for item_id in _item_ids():
-		# La pool del taller no se reparte gratis: solo está a la venta allí.
 		if item_id in NON_REWARD_ITEMS or item_id in _shop_pool():
 			continue
 		pool.append(item_id)
-	return _draw_weighted(rng, pool, count)
+	var drops := _draw_weighted(rng, pool, 1)
+	return String(drops[0]) if not drops.is_empty() else ""
 
 # Ofertas de la compra: se dibujan de la pool exclusiva de content/economy.json.
 func _pick_shop_offers(rng: RandomNumberGenerator) -> Array:
@@ -170,10 +161,6 @@ func _shop_pool() -> Array:
 
 func _shop_offer_count() -> int:
 	var db := _content_db()
-	return db.get_shop_offers_with_key() if db else 0
-
-func _shop_visible_count() -> int:
-	var db := _content_db()
 	return db.get_shop_offers() if db else 0
 
 func enemy_budget(room: Dictionary) -> int:
@@ -195,18 +182,10 @@ func validate_room(room: Dictionary) -> Array[String]:
 		errors.append("combat room exceeds difficulty budget")
 	if room.get("kind") == "risk" and enemy_budget(room) > 3:
 		errors.append("risk room exceeds difficulty budget")
-	# Las ofertas son identificadores estables y no se repiten dentro de la sala.
-	var offers: Array = room.get("offers", [])
+	# Ninguna sala regala objetos: solo el jefe y la tienda del taller los sueltan.
 	var kind := String(room.get("kind", ""))
-	if kind in REWARD_ROOM_KINDS and offers.size() != REWARD_OFFER_COUNT:
-		errors.append("reward room %d debe ofrecer %d objetos" % [int(room.get("index", -1)), REWARD_OFFER_COUNT])
-	if offers.size() != _unique_count(offers):
-		errors.append("reward room %d ofrece objetos repetidos" % int(room.get("index", -1)))
-	for item_id in offers:
-		if _item(String(item_id)).is_empty():
-			errors.append("reward room ofrece objeto desconocido %s" % item_id)
-		elif String(item_id) in _shop_pool():
-			errors.append("la pool del taller no se reparte gratis (%s)" % item_id)
+	if not (room.get("offers", []) as Array).is_empty():
+		errors.append("sala %d no debe ofrecer objetos gratis" % int(room.get("index", -1)))
 	# Botín de hilos: cantidad dentro del rango de content/economy.json.
 	var limits := _loot_range(kind)
 	if int(limits[0]) < 0:
@@ -236,8 +215,6 @@ func validate_room(room: Dictionary) -> Array[String]:
 		errors.append("solo la sala de taller define shop_offers")
 	if shop_offers.size() != _unique_count(shop_offers):
 		errors.append("el taller repite ofertas")
-	if wanted < _shop_visible_count():
-		errors.append("economy.json no permite mostrar %d de %d ofertas" % [_shop_visible_count(), wanted])
 	for item_id in shop_offers:
 		var offer := String(item_id)
 		if not (offer in _shop_pool()):
@@ -247,6 +224,49 @@ func validate_room(room: Dictionary) -> Array[String]:
 		elif db != null and int(db.get_price(offer)) <= 0:
 			errors.append("el taller vende %s sin precio" % offer)
 	return errors
+
+# Ofertas de la tienda para esta partida: fuera las que ya lleva la jugadora.
+# Se reponen desde la pool con la semilla de la sala, así que el sorteo no
+# cambia y siempre hay opciones nuevas que coger (doc 07 §13).
+func shop_offers_for(room: Dictionary, owned: Array) -> Array:
+	var wanted := _shop_offer_count()
+	var out: Array = []
+	for item_id in (room.get("shop_offers", []) as Array):
+		var id := String(item_id)
+		if not (id in owned) and not (id in out):
+			out.append(id)
+	var pool: Array = []
+	for item_id in _shop_pool():
+		var id := String(item_id)
+		if not (id in owned) and not (id in out):
+			pool.append(id)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(room.get("seed", 0))
+	while out.size() < wanted and not pool.is_empty():
+		var pick := _draw_weighted(rng, pool, 1)
+		if pick.is_empty():
+			break
+		out.append(String(pick[0]))
+		pool.erase(String(pick[0]))
+	return out
+
+# Botín del jefe para esta partida: nunca un objeto que ya lleves.
+func boss_drop_for(room: Dictionary, owned: Array) -> String:
+	var drop := String(room.get("boss_drop", ""))
+	if drop != "" and not (drop in owned):
+		return drop
+	var pool: Array = []
+	for item_id in _item_ids():
+		var id := String(item_id)
+		if id in NON_REWARD_ITEMS or id in _shop_pool() or id in owned:
+			continue
+		pool.append(id)
+	if pool.is_empty():
+		return ""
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(room.get("seed", 0)) + 7919
+	var pick := _draw_weighted(rng, pool, 1)
+	return String(pick[0]) if not pick.is_empty() else ""
 
 func _unique_count(values: Array) -> int:
 	var seen := {}

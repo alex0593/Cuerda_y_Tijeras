@@ -107,7 +107,7 @@ func _spawn_counter() -> void:
 	current_room.add_child(counter)
 
 	_shop_label = Label.new()
-	_shop_label.position = Vector2(COUNTER_POS.x - 110, COUNTER_POS.y - 118)
+	_shop_label.position = Vector2(COUNTER_POS.x - 110, COUNTER_POS.y - 145)
 	_shop_label.size = Vector2(220, 30)
 	_shop_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_shop_label.add_theme_font_size_override("font_size", 18)

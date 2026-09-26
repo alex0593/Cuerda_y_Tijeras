@@ -27,4 +27,4 @@ Responde directamente a la petición de «agarrar los items que quiera»: la mon
 ## Revisión
 - **Fecha de revisión:** después del playtest H3
 - **Resultado:**
-- **Nueva decisión relacionada:** D-002
+- **Nueva decisión relacionada:** D-002, D-004

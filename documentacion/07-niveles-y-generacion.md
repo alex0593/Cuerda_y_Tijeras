@@ -197,20 +197,28 @@ Los Hilos son la moneda de la partida y se gastan **solo** en el taller. Todo el
   | workshop | 2–3 |
   | boss | 0 |
 
-- **Objetos gratis.** Las salas de recompensa (`treasure`, `risk`, `workshop`) siguen ofreciendo sus 3 objetos sin coste, colocados en el suelo.
-- **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto del catálogo al morir, distinto del arma inicial y generador como `boss_drop` en la semilla.
+- **Objetos gratis.** Las salas de recompensa (`treasure`, `risk`, `workshop`) siguen ofreciendo sus 3 objetos sin coste, colocados en el suelo. Ese reparto sale del catálogo **sin** la pool del taller (§13): lo que está a la venta no cae gratis.
+- **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto del catálogo al morir, distinto del arma inicial y generado como `boss_drop` en la semilla.
+- **Llaves.** Recurso que cae de los enemigos y se puede comprar en el taller (§13). Solo sirven para abrir la tercera oferta del taller.
 
-Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**.
+Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**; una llave cuesta **6 hilos**.
 
 ## 13. Taller
 
-El taller es una sala única y es **la única tienda** de la partida. En la sala aparece una estación fija; al tocarla se abre el panel del taller con la partida congelada.
+El taller es una sala única y es **la única tienda** de la partida. A diferencia del resto de salas, tiene **stock propio**: una pool de objetos que no aparecen gratis en ninguna otra sala (D-004).
+
+- **Pool exclusiva** (`shop_pool` en `content/economy.json`): `scissors_precision`, `music_box`, `glass_eye`, `iron_magnet` y `toy_glue`. Ninguno de ellos se ofrece en las salas de recompensa ni en el botín del jefe: solo se compran aquí.
+- **Ofertas sorteadas.** Cada partida sortea `shop.offers_with_key` (3) objetos de esa pool con la semilla y los guarda en `shop_offers` de la sala. Se exponen en la sala, en la fila **A LA VENTA**, con su precio encima.
+- **Dos a la vista.** Solo se muestran `shop.offers` (2); la tercera aparece en cuanto se gasta una llave. El sorteo se hace entero al generar, así que abrir la tercera no cambia lo que hay.
+- **Llaves.** Cuestan `shop.key_cost` (6) hilos en el taller y también caen de los enemigos. Solo sirve una: al abrirla se gasta y queda la oferta abierta para el resto de la partida.
+- Al tocar una oferta se abre el panel del taller con la partida congelada; el panel también se puede cerrar y reabrir tocando otra oferta.
 
 El taller permite:
 
-- Comprar **un objeto a elegir** de todo el catálogo, pagando con hilos.
+- Comprar **los objetos expuestos** en la sala, pagando con hilos.
 - Cambiar un objeto si el slot está lleno (la decisión de a quién reemplazar es de la jugadora, dentro del mismo panel).
 - Reparar vida a cambio de hilos.
+- Comprar una llave y gastarla en la oferta extra.
 - Vender un objeto / obtener una pista: fuera del alcance del vertical slice.
 
 Reglas de la compra:

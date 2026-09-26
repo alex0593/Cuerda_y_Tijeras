@@ -61,7 +61,9 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Botón atrás pausa en vez de cerrar la app y perder la partida.
 - [x] Botones táctiles funcionales (`Dash`, `Rewind`, `Ⅱ`, `Reintentar`).
 - [x] Exportar e instalar el APK H3 (`0.3.5-h3`) y recorrer las 7 salas en hardware.
-- [ ] Confirmar en persona el panel de cambio de objetos.
+- [x] Confirmar en persona el panel de cambio de objetos.
+- [x] Economía de hilos: botín en el suelo de cada sala, taller para comprar objeto a elegir o reparar vida.
+- [x] La Caja de Cero siempre suelta un objeto del catálogo al morir.
 - [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [ ] Caja de Cero con dos fases funcionales y contraestrategias.
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.

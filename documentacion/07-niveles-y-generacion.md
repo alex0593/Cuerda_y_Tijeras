@@ -182,16 +182,43 @@ La economía no necesita una moneda global compleja. Puede utilizar:
 
 Evitar que una moneda permanente convierta el combate en un sistema de números.
 
+### 12.1 Hilos (vertical slice)
+
+Los Hilos son la moneda de la partida y se gastan **solo** en el taller. Todo el balance vive en `content/economy.json`; ninguna cifra está en escenas ni en scripts.
+
+- **Botín en el suelo.** Cada sala deja un rango de hilos recogibles, indicado por su tipo de sala:
+
+  | Sala | Hilos |
+  | --- | --- |
+  | start | 0 |
+  | combat | 2–4 |
+  | treasure | 2–3 |
+  | risk | 3–5 |
+  | workshop | 2–3 |
+  | boss | 0 |
+
+- **Objetos gratis.** Las salas de recompensa (`treasure`, `risk`, `workshop`) siguen ofreciendo sus 3 objetos sin coste, colocados en el suelo.
+- **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto del catálogo al morir, distinto del arma inicial y generador como `boss_drop` en la semilla.
+
+Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**.
+
 ## 13. Taller
+
+El taller es una sala única y es **la única tienda** de la partida. En la sala aparece una estación fija; al tocarla se abre el panel del taller con la partida congelada.
 
 El taller permite:
 
-- Cambiar un objeto.
-- Reparar vida a cambio de moneda.
-- Obtener una pista.
-- Vender un objeto.
+- Comprar **un objeto a elegir** de todo el catálogo, pagando con hilos.
+- Cambiar un objeto si el slot está lleno (la decisión de a quién reemplazar es de la jugadora, dentro del mismo panel).
+- Reparar vida a cambio de hilos.
+- Vender un objeto / obtener una pista: fuera del alcance del vertical slice.
 
-En el prototipo puede ser un menú con un subconjunto de objetos. No hace falta una tienda grande.
+Reglas de la compra:
+
+- Los hilos solo se descuentan cuando el objeto acaba entrando.
+- Un objeto ya equipado no se compra dos veces; los consumibles sí se reponen hasta su máximo de cargas.
+- Con la vida llena la reparación no está disponible.
+- Tocar fuera del panel cierra el taller sin gastar nada.
 
 ## 14. Salas de jefe
 

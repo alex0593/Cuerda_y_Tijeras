@@ -114,7 +114,58 @@ func _run() -> void:
 	var closed: Dictionary = state.get_buy_info("iron_magnet")
 	_check(not bool(closed.get("allowed", false)), "sin partida no se debe poder comprar")
 
-	# 9. El panel del taller se pinta, congela la partida y se cierra limpio.
+	# 9. Pool exclusiva del taller: solo se vende allí y gira entre partidas.
+	var pool: Array = db.get_shop_pool()
+	_check(pool.size() >= db.get_shop_offers_with_key(),
+		"la pool del taller debe cubrir todas sus ofertas")
+	var sold := {}
+	for run_seed in range(1, 21):
+		var run: Dictionary = generator.generate_run(run_seed * 1013)
+		for room in (run["rooms"] as Array):
+			var kind := String(room.get("kind", ""))
+			var shop: Array = room.get("shop_offers", [])
+			if kind == "workshop":
+				_check(shop.size() == db.get_shop_offers_with_key(),
+					"el taller debe exponer %d ofertas" % db.get_shop_offers_with_key())
+			elif not shop.is_empty():
+				_check(false, "solo la sala de taller expone su pool")
+			for item_id in shop:
+				_check(String(item_id) in pool, "el taller vende %s fuera de su pool" % item_id)
+				_check(String(item_id) != "scissors_basic", "el taller no debe vender el arma inicial")
+				sold[String(item_id)] = true
+			for item_id in (room.get("offers", []) as Array):
+				_check(not (String(item_id) in pool),
+					"%s no debe caer gratis si pertenece a la pool del taller" % item_id)
+	_check(sold.size() == pool.size(), "con 20 semillas debe girar toda la pool del taller (%d/%d)" % [sold.size(), pool.size()])
+
+	# 10. La llave se compra con hilos y abre la tercera oferta al gastarla.
+	state.start_run(9002)
+	state.keys = 0
+	state.threads = 0
+	state.shop_extra_unlocked = false
+	_check(state.visible_shop_offers(3) == db.get_shop_offers(), "sin llave solo se ven las ofertas base")
+	var no_threads: Dictionary = state.get_key_info()
+	_check(not bool(no_threads["allowed"]) and String(no_threads["reason"]) == "faltan hilos",
+		"sin hilos la llave debe decir que faltan hilos")
+	_check(not state.unlock_shop_offer(), "sin llave no se debe abrir la oferta extra")
+	var no_key: Dictionary = state.get_unlock_info()
+	_check(not bool(no_key["allowed"]) and String(no_key["reason"]) == "falta una llave",
+		"debe explicar que falta una llave")
+	state.threads = int(db.get_key_cost())
+	_check(state.buy_key(), "con hilos suficientes la llave debe comprarse")
+	_check(state.threads == 0, "la llave debe descontar su precio")
+	_check(state.keys == 1, "la llave comprada debe sumarse")
+	_check(not state.buy_key(), "con una llave ya comprada no se debe vender otra")
+	_check(state.unlock_shop_offer(), "con una llave la oferta extra debe abrirse")
+	_check(state.keys == 0, "la llave se gasta al abrir la oferta")
+	_check(state.shop_extra_unlocked, "la oferta extra debe quedar abierta")
+	_check(state.visible_shop_offers(3) == db.get_shop_offers_with_key(),
+		"abierta debe enseñar todas las ofertas de la pool")
+	_check(not state.get_unlock_info().get("allowed", false), "no se debe poder abrir dos veces")
+	state.end_run(false)
+	paused = false
+
+	# 11. El panel del taller se pinta, congela la partida y se cierra limpio.
 	await _run_shop_panel(state)
 
 	if failures.is_empty():
@@ -128,6 +179,7 @@ func _run() -> void:
 # Ejercita ui/shop_panel.gd de verdad: construir los botones, congelar y comprar.
 func _run_shop_panel(state: Node) -> void:
 	var content: Node = root.get_node_or_null("SynergyDB")
+	var generator: Node = root.get_node_or_null("RoomGenerator")
 	var scene = load("res://gameplay/main/game.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
@@ -139,8 +191,18 @@ func _run_shop_panel(state: Node) -> void:
 			scene.free()
 		return
 
+	# Las ofertas salen de la sala de taller de una partida con semilla.
+	var offers: Array = []
+	for room in (generator.generate_run(4242)["rooms"] as Array):
+		if String(room.get("kind", "")) == "workshop":
+			offers = room.get("shop_offers", []) as Array
+	_check(offers.size() == int(content.get_shop_offers_with_key()),
+		"el taller debe sortear todas las ofertas de su pool")
+
 	_check(not bool(panel.get("is_open")), "el taller debe arrancar cerrado")
 	state.threads = 20
+	state.keys = 0
+	state.shop_extra_unlocked = false
 	var overlay := scene.get_node_or_null("PauseOverlay") as CanvasLayer
 	_check(overlay != null, "game.tscn debe tener el overlay de pausa")
 
@@ -150,27 +212,57 @@ func _run_shop_panel(state: Node) -> void:
 	_check(bool(paused) and overlay != null and overlay.visible, "pausar debe mostrar el overlay")
 
 	# El taller se abre por encima de esa pausa: no debe heredar el texto.
-	panel.call("open")
+	panel.call("open", offers)
 	await process_frame
 	_check(bool(panel.get("is_open")), "el taller debe abrirse")
 	_check(bool(paused), "el taller debe congelar la partida")
 	_check(overlay != null and not overlay.visible, "el overlay de pausa no debe tapar el taller")
 
-	# El catálogo pinta todos los objetos salvo el arma inicial.
+	# Solo se enseñan las ofertas expuestas, no todo el catálogo.
 	var body: Control = panel.get("_body")
-	_check(body != null and body.get_child_count() >= 2, "el taller debe pintar catálogo y acciones")
-	var buttons: Array = []
-	if body != null and body.get_child_count() >= 1:
-		var grid := body.get_child(0).get_child(0) as GridContainer
-		_check(grid != null, "el catálogo debe ser una rejilla de botones")
-		if grid:
-			for child in grid.get_children():
-				buttons.append(child)
-	var expected := (content.items_data.size() as int) - 1 if content else 1
-	_check(buttons.size() == expected, "el catálogo debe ofrecer %d objetos, no %d" % [expected, buttons.size()])
+	_check(body != null and body.get_child_count() >= 3, "el taller debe pintar catálogo y acciones")
+	var expected: int = state.visible_shop_offers(offers.size())
+	_check(expected == int(content.get_shop_offers()), "sin llave deben verse %d ofertas" % content.get_shop_offers())
+	var buttons: Array = _grid_buttons(body)
+	_check(buttons.size() == expected, "el taller debe ofrecer %d objetos, no %d" % [expected, buttons.size()])
+
+	var key_button: Button = null
+	var unlock_button: Button = null
+	if body.get_child_count() >= 3:
+		var first_row := body.get_child(1) as Container
+		var second_row := body.get_child(2) as Container
+		_check(first_row != null and first_row.get_child_count() == 2, "debe haber reparación y compra de llave")
+		_check(second_row != null and second_row.get_child_count() == 2, "debe haber oferta extra y salir")
+		if first_row != null and first_row.get_child_count() >= 2:
+			key_button = first_row.get_child(1) as Button
+		if second_row != null and second_row.get_child_count() >= 1:
+			unlock_button = second_row.get_child(0) as Button
+	_check(key_button != null and not key_button.disabled, "con hilos la llave debe estar a la venta")
+	_check(unlock_button != null and unlock_button.disabled, "sin llave la oferta extra debe estar bloqueada")
+
+	# La llave se compra aquí y abre la tercera oferta al gastarla.
+	var threads_before: int = state.threads
+	if key_button != null:
+		key_button.pressed.emit()
+	await process_frame
+	_check(state.keys == 1, "el taller debe entregar la llave comprada")
+	_check(state.threads == threads_before - int(content.get_key_cost()), "la llave debe descontar su precio")
+	unlock_button = null
+	if body.get_child_count() >= 3:
+		var row := body.get_child(2) as Container
+		if row != null and row.get_child_count() >= 1:
+			unlock_button = row.get_child(0) as Button
+	_check(unlock_button != null and not unlock_button.disabled, "con una llave la oferta extra debe abrirse")
+	if unlock_button != null:
+		unlock_button.pressed.emit()
+	await process_frame
+	_check(state.shop_extra_unlocked, "la oferta extra debe quedar abierta")
+	_check(state.keys == 0, "la llave se gasta al abrir la oferta")
+	buttons = _grid_buttons(body)
+	_check(buttons.size() == offers.size(), "abierta debe enseñar las %d ofertas sorteadas" % offers.size())
 
 	# Pulsar una opción compra o pasa a elegir a quién reemplazar.
-	var threads_before: int = state.threads
+	threads_before = state.threads
 	var pressed := false
 	for button in buttons:
 		var candidate := button as Button
@@ -178,7 +270,7 @@ func _run_shop_panel(state: Node) -> void:
 			candidate.pressed.emit()
 			pressed = true
 			break
-	_check(pressed, "con 20 hilos debe haber al menos una opción comprable")
+	_check(pressed, "con hilos debe haber al menos una opción comprable")
 	await process_frame
 	_check(bool(panel.get("is_open")), "comprar no debe cerrar el taller")
 	_check(state.threads <= threads_before, "comprar nunca debe sumar hilos")
@@ -207,6 +299,20 @@ func _run_shop_panel(state: Node) -> void:
 		scene.free()
 	for i in 3:
 		await process_frame
+
+func _grid_buttons(body: Control) -> Array:
+	var out: Array = []
+	if body == null or body.get_child_count() < 1:
+		return out
+	var wrapper := body.get_child(0) as CenterContainer
+	if wrapper == null or wrapper.get_child_count() < 1:
+		return out
+	var grid := wrapper.get_child(0) as GridContainer
+	if grid == null:
+		return out
+	for child in grid.get_children():
+		out.append(child)
+	return out
 
 func _back_event() -> InputEventKey:
 	var key := InputEventKey.new()

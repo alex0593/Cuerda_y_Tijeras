@@ -43,6 +43,9 @@ func _run() -> void:
 		for room in run["rooms"]:
 			for item_id in room.get("offers", []):
 				reachable[String(item_id)] = true
+			# La pool del taller solo se alcanza comprando (doc 07 §13).
+			for item_id in room.get("shop_offers", []):
+				reachable[String(item_id)] = true
 	for item_id in item_ids:
 		if item_id == "scissors_basic":
 			continue

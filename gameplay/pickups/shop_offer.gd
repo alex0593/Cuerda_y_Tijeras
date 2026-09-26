@@ -1,14 +1,17 @@
-# Oferta a la vista en el taller (doc 07 §13): un objeto de la pool exclusiva
-# con su precio. Tocarla abre el panel de compra; nunca se recoge gratis.
+# Oferta en el suelo de la tienda (doc 07 §13): un objeto de la pool exclusiva
+# o la reparación de vida, con su precio en hilos. Pisarla compra si hay hilos;
+# si faltan, se queda en el suelo y puedes volver. Nunca se recoge gratis.
 extends Area2D
-
-signal chosen(item_id: String)
 
 const CARD_SIZE := Vector2(76, 76)
 const NAME_BOX := Rect2(-70, -84, 140, 44)
 const PRICE_BOX := Rect2(-70, -16, 140, 32)
 
-var item_id := ""
+# La reparación no es un objeto: se compra con hilos y se puede repetir.
+const REPAIR_ID := "repair"
+
+var offer_id := ""
+var is_repair := false
 var enabled := true
 
 func _ready() -> void:
@@ -20,7 +23,7 @@ func _ready() -> void:
 	shape.shape = rectangle
 	add_child(shape)
 
-	var color := _rarity_color(String(SynergyDB.get_item(item_id).get("rarity", "común")))
+	var color := Color(0.88, 0.52, 0.28) if is_repair else _rarity_color(_rarity())
 	var half := CARD_SIZE * 0.5
 	var frame := Polygon2D.new()
 	frame.polygon = PackedVector2Array([
@@ -40,7 +43,7 @@ func _ready() -> void:
 
 	var ink := Color(0.22, 0.17, 0.11)
 	var name := Label.new()
-	name.text = String(SynergyDB.get_item(item_id).get("name", item_id))
+	name.text = "Reparar vida" if is_repair else String(SynergyDB.get_item(offer_id).get("name", offer_id))
 	name.position = NAME_BOX.position
 	name.size = NAME_BOX.size
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -51,7 +54,7 @@ func _ready() -> void:
 	add_child(name)
 
 	var price := Label.new()
-	price.text = "%d hilos" % SynergyDB.get_price(item_id)
+	price.text = "%d hilos" % price_of()
 	price.position = PRICE_BOX.position
 	price.size = PRICE_BOX.size
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -63,15 +66,44 @@ func _ready() -> void:
 	_apply_enabled()
 	body_entered.connect(_on_body_entered)
 
+func price_of() -> int:
+	return SynergyDB.get_repair_cost() if is_repair else SynergyDB.get_price(offer_id)
+
+func _rarity() -> String:
+	return "común" if is_repair else String(SynergyDB.get_item(offer_id).get("rarity", "común"))
+
+# Pisar la oferta compra si hay hilos; si no, avisa y se queda en el suelo.
 func _on_body_entered(body: Node) -> void:
 	if not enabled or not GameState.is_running:
 		return
 	if not body.is_in_group("player"):
 		return
-	chosen.emit(item_id)
+	if is_repair:
+		_on_repair()
+		return
+	var info := GameState.get_buy_info(offer_id)
+	if not bool(info.get("allowed", false)):
+		# «ya lo llevas» no debería pasar: la pool ya excluye lo que llevas.
+		if String(info.get("reason", "")) != "ya lo llevas":
+			GameState.show_toast(String(info.get("reason", "faltan hilos")))
+		return
+	var bought := GameState.buy_item(offer_id)
+	if bool(bought.get("ok", false)):
+		var item_name := String(SynergyDB.get_item(offer_id).get("name", offer_id))
+		GameState.show_toast("Comprado: %s" % item_name)
+		set_enabled(false)
+	else:
+		GameState.show_toast(String(bought.get("reason", "no se pudo comprar")))
 
-# La tercera oferta se enseña cuando se gasta una llave; mientras tanto ni se
-# ve ni se puede tocar, para que nadie abra el panel contra su voluntad.
+func _on_repair() -> void:
+	if GameState.buy_repair():
+		GameState.show_toast("Vida reparada")
+		return
+	# Con la vida llena no hay nada que hacer: no molestar.
+	if String(GameState.get_repair_info().get("reason", "")) != "la vida ya está llena":
+		GameState.show_toast(String(GameState.get_repair_info().get("reason", "no se pudo reparar")))
+
+# La tienda cerrada no enseña sus ofertas; al abrirlas aparecen.
 func set_enabled(on: bool) -> void:
 	enabled = on
 	_apply_enabled()

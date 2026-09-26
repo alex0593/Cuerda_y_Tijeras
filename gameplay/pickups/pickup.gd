@@ -25,7 +25,7 @@ func _display_name() -> String:
 	if kind.begins_with("item:"):
 		var item_id := kind.trim_prefix("item:")
 		return String(SynergyDB.get_item(item_id).get("name", item_id))
-	return "Hilo" if kind == "thread" else "Llave"
+	return "Hilo" if kind == "thread" else "Alfiler"
 
 func _display_color() -> Color:
 	if kind == "thread":
@@ -54,10 +54,8 @@ func _physics_process(delta: float) -> void:
 func _is_collectable() -> bool:
 	if not kind.begins_with("item:"):
 		return true
-	var info := GameState.get_swap_info(kind.trim_prefix("item:"))
-	if bool(info.get("needs_swap", false)):
-		return true
-	return String(info.get("reason", "")) == ""
+	# Sin límite de huecos, un objeto se puede llevar salvo restricción.
+	return bool(GameState.can_add_item(kind.trim_prefix("item:")).get("allowed", false))
 
 func _on_body(body: Node) -> void:
 	if not body.is_in_group("player"):
@@ -67,18 +65,18 @@ func _on_body(body: Node) -> void:
 		var item_id := kind.trim_prefix("item:")
 		consumed = GameState.add_item(item_id)
 		if not consumed:
-			var info := GameState.get_swap_info(item_id)
-			if bool(info.get("needs_swap", false)):
-				# El slot está lleno: que la jugadora decida a quién cambia.
-				GameState.swap_requested.emit(self, item_id, info.get("candidates", []))
-			else:
-				# Sin feedback el objeto parece roto: la jugadora no entiende por qué
-				# no se recoge (doc 05, restricciones deben ser legibles).
-				_reject(String(info.get("reason", "no se puede llevar")))
+			# Sin feedback el objeto parece roto: la jugadora no entiende por qué
+			# no se recoge (doc 05, restricciones deben ser legibles).
+			_reject(_reject_reason(item_id))
 	else:
 		GameState.add_resource(kind)
 	if consumed:
 		queue_free()
+
+func _reject_reason(item_id: String) -> String:
+	if item_id in GameState.items:
+		return "ya lo llevas"
+	return String(GameState.can_add_item(item_id).get("reason", "no se puede llevar"))
 
 func _reject(reason: String) -> void:
 	_flash_time = 0.6

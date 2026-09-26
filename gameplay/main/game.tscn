@@ -1,11 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://game_main_vs1"]
+[gd_scene load_steps=5 format=3 uid="uid://game_main_vs1"]
 
 [ext_resource type="Script" path="res://gameplay/main/game.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="3"]
 [ext_resource type="Script" path="res://gameplay/rooms/room.gd" id="4"]
-[ext_resource type="Script" path="res://ui/swap_panel.gd" id="5"]
-[ext_resource type="Script" path="res://ui/shop_panel.gd" id="6"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1")
@@ -17,12 +15,6 @@ enabled = true
 [node name="HUD" parent="." instance=ExtResource("2")]
 
 [node name="TouchControls" parent="." instance=ExtResource("3")]
-
-[node name="SwapPanel" type="CanvasLayer" parent="."]
-script = ExtResource("5")
-
-[node name="ShopPanel" type="CanvasLayer" parent="."]
-script = ExtResource("6")
 
 [node name="PauseOverlay" type="CanvasLayer" parent="."]
 visible = false
@@ -40,7 +32,8 @@ offset_right = 160.0
 offset_bottom = 50.0
 horizontal_alignment = 1
 vertical_alignment = 1
-text = "PAUSA\nToca Ⅱ o pulsa Esc"
+text = "PAUSA
+Toca Ⅱ o pulsa Esc"
 
 [node name="End" type="CanvasLayer" parent="."]
 visible = false

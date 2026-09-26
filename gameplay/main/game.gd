@@ -9,27 +9,13 @@ var _run_serial := 0
 
 @onready var hud: CanvasLayer = $HUD
 @onready var touch: CanvasLayer = $TouchControls
-@onready var swap_panel: CanvasLayer = $SwapPanel
-@onready var shop_panel: CanvasLayer = $ShopPanel
 
 func _ready() -> void:
 	# El coordinator debe seguir recibiendo entrada mientras el árbol está pausado
 	# para poder cerrar la pausa o reintentar desde el resumen.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameState.run_ended.connect(_on_run_ended)
-	GameState.swap_requested.connect(_on_swap_requested)
-	if is_instance_valid(shop_panel):
-		shop_panel.closed.connect(_on_shop_closed)
 	_start_new_run(randi())
-
-func _on_swap_requested(pickup: Node, new_item_id: String, candidates: Array) -> void:
-	# Solo tiene sentido cambiar objetos con la partida en curso y sin otro
-	# panel decidido encima (el taller ya está congelando la partida).
-	if not GameState.is_running or not is_instance_valid(swap_panel):
-		return
-	if _panel_open():
-		return
-	swap_panel.call("open", pickup, new_item_id, candidates)
 
 func _start_new_run(p_seed: int) -> void:
 	_run_serial += 1
@@ -63,24 +49,12 @@ func _spawn_current() -> void:
 	current_room = room
 	add_child(room)
 	move_child(room, 0)
-	_drop_offers(data.get("offers", []) as Array)
 	_drop_loot(data.get("loot", []) as Array)
 	if String(data.get("kind", "")) == "workshop":
-		_spawn_shop_offers(data.get("shop_offers", []) as Array)
-		GameState.show_toast("Taller: a la venta")
+		_spawn_shop(data)
 	# Las salas sin enemigos se completan después de añadir sus recompensas.
 	if (data.get("enemies", []) as Array).is_empty():
 		room.call("_mark_cleared")
-
-# Las ofertas vienen del generador con semilla (doc 05): la jugadora decide
-# cuáles recoger antes de salir por la puerta, así que se dejan todas en el suelo.
-func _drop_offers(offers: Array) -> void:
-	var slots: Array[Vector2] = [
-		Vector2(320, 150), Vector2(600, 150), Vector2(860, 150),
-		Vector2(420, 400), Vector2(700, 400),
-	]
-	for i in mini(offers.size(), slots.size()):
-		_drop_reward(slots[i], "item:%s" % String(offers[i]))
 
 func _drop_reward(pos: Vector2, kind: String) -> void:
 	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
@@ -98,53 +72,83 @@ func _drop_loot(loot: Array) -> void:
 	for i in mini(loot.size(), LOOT_SLOTS.size()):
 		_drop_reward(LOOT_SLOTS[i], String(loot[i]))
 
-# El taller expone su propia pool: las ofertas se enseñan en la sala con su
-# precio y tocarlas abre el panel de compra (doc 07 §13).
+# La tienda del taller (doc 07 §13): un mostrador cerrado con un nudo que se
+# corta con un tiro (el mecanismo que usan todas las salas). Cortarlo cobra la
+# entrada: un alfiler, o forzarla con hilos. Dentro, las ofertas en el suelo
+# con su precio se compran al pisarlas.
 const SHOP_SLOTS: Array[Vector2] = [
-	Vector2(340, 400), Vector2(520, 400), Vector2(700, 400),
+	Vector2(360, 400), Vector2(680, 400),
 ]
+const REPAIR_ID := "repair"
+const REPAIR_SLOT := Vector2(520, 400)
+const COUNTER_POS := Vector2(520, 395)
+const KNOT_POS := Vector2(520, 330)
 
-var _shop_offers: Array = []
-var _shop_offer_nodes: Array = []
+var _shop_data: Dictionary = {}
+var _shop_cards: Array = []
+var _shop_label: Label = null
 
-func _spawn_shop_offers(offers: Array) -> void:
-	_shop_offers = offers.duplicate()
-	_shop_offer_nodes.clear()
-	var header := Label.new()
-	header.text = "A LA VENTA"
-	header.position = Vector2(420, 322)
-	header.size = Vector2(200, 30)
-	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_theme_font_size_override("font_size", 18)
-	header.add_theme_color_override("font_color", Color(0.32, 0.24, 0.14))
-	current_room.add_child(header)
-	var shown := GameState.visible_shop_offers(offers.size())
+func _spawn_shop(data: Dictionary) -> void:
+	_shop_data = data
+	_shop_cards.clear()
+	_spawn_counter()
+	_spawn_knot()
+	_spawn_shop_cards()
+	_style_shop(GameState.shop_open)
+
+# El mostrador: se ve cerrado hasta cortar el nudo.
+func _spawn_counter() -> void:
+	var counter := Polygon2D.new()
+	counter.polygon = PackedVector2Array([
+		Vector2(-240, -55), Vector2(240, -55), Vector2(240, 55), Vector2(-240, 55),
+	])
+	counter.color = Color(0.55, 0.42, 0.24)
+	counter.position = COUNTER_POS
+	current_room.add_child(counter)
+
+	_shop_label = Label.new()
+	_shop_label.position = Vector2(COUNTER_POS.x - 110, COUNTER_POS.y - 118)
+	_shop_label.size = Vector2(220, 30)
+	_shop_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shop_label.add_theme_font_size_override("font_size", 18)
+	current_room.add_child(_shop_label)
+
+# El nudo: se corta con un tiro y cobra la entrada al cortarse.
+func _spawn_knot() -> void:
+	if GameState.shop_open:
+		return
+	var knot := preload("res://gameplay/pickups/shop_knot.gd").new()
+	knot.position = KNOT_POS
+	knot.opened.connect(_on_shop_opened)
+	current_room.add_child(knot)
+
+func _on_shop_opened() -> void:
+	_style_shop(true)
+	for card in _shop_cards:
+		if is_instance_valid(card):
+			card.call("set_enabled", true)
+
+func _style_shop(open: bool) -> void:
+	if not is_instance_valid(_shop_label):
+		return
+	_shop_label.text = "TIENDA ABIERTA" if open else "TIENDA CERRADA"
+	_shop_label.add_theme_color_override("font_color", Color(0.20, 0.55, 0.25) if open else Color(0.75, 0.30, 0.25))
+
+# Las ofertas se sacan de la pool del taller sin repetir lo que ya llevas.
+func _spawn_shop_cards() -> void:
+	var offers: Array = RoomGenerator.shop_offers_for(_shop_data, GameState.items)
 	for i in mini(offers.size(), SHOP_SLOTS.size()):
-		var offer := preload("res://gameplay/pickups/shop_offer.gd").new()
-		offer.item_id = String(offers[i])
-		offer.enabled = i < shown
-		current_room.add_child(offer)
-		offer.global_position = SHOP_SLOTS[i]
-		offer.chosen.connect(_on_shop_offer_chosen)
-		_shop_offer_nodes.append(offer)
+		_spawn_card(String(offers[i]), SHOP_SLOTS[i], false)
+	_spawn_card(REPAIR_ID, REPAIR_SLOT, true)
 
-# Al cerrar el panel puede haberse gastado la llave: la tercera oferta aparece.
-func _refresh_shop_offers() -> void:
-	var shown := GameState.visible_shop_offers(_shop_offer_nodes.size())
-	for i in _shop_offer_nodes.size():
-		var offer = _shop_offer_nodes[i]
-		if is_instance_valid(offer):
-			offer.call("set_enabled", i < shown)
-
-func _on_shop_offer_chosen(_item_id: String) -> void:
-	if not GameState.is_running or not is_instance_valid(shop_panel):
-		return
-	if _panel_open():
-		return
-	shop_panel.call("open", _shop_offers)
-
-func _on_shop_closed() -> void:
-	_refresh_shop_offers()
+func _spawn_card(offer_id: String, pos: Vector2, is_repair: bool) -> void:
+	var card := preload("res://gameplay/pickups/shop_offer.gd").new()
+	card.offer_id = offer_id
+	card.is_repair = is_repair
+	card.enabled = GameState.shop_open
+	current_room.add_child(card)
+	card.global_position = pos
+	_shop_cards.append(card)
 
 func _on_room_cleared() -> void:
 	if not GameState.is_running or _transitioning:
@@ -216,20 +220,12 @@ func _process(_delta: float) -> void:
 	$PauseOverlay.visible = get_tree().paused and not _panel_open() and not ($End as CanvasLayer).visible
 
 func _panel_open() -> bool:
-	for panel in [swap_panel, shop_panel]:
-		if is_instance_valid(panel) and bool(panel.get("is_open")):
-			return true
 	return false
 
 func _unhandled_input(event: InputEvent) -> void:
-	# En Android el botón atrás cerraba la app y perdía la partida.
-	# Ahora pausa; con un panel abierto, lo cierra.
+	# En Android el botón atrás cerraba la app y perdía la partida. Ahora pausa.
 	if not _is_back_pressed(event):
 		return
-	for panel in [swap_panel, shop_panel]:
-		if is_instance_valid(panel) and bool(panel.get("is_open")):
-			panel.call("_close")
-			return
 	if ($End as CanvasLayer).visible:
 		return
 	get_viewport().set_input_as_handled()

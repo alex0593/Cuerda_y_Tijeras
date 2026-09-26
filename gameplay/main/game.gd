@@ -18,6 +18,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameState.run_ended.connect(_on_run_ended)
 	GameState.swap_requested.connect(_on_swap_requested)
+	if is_instance_valid(shop_panel):
+		shop_panel.closed.connect(_on_shop_closed)
 	_start_new_run(randi())
 
 func _on_swap_requested(pickup: Node, new_item_id: String, candidates: Array) -> void:
@@ -64,7 +66,8 @@ func _spawn_current() -> void:
 	_drop_offers(data.get("offers", []) as Array)
 	_drop_loot(data.get("loot", []) as Array)
 	if String(data.get("kind", "")) == "workshop":
-		_spawn_shop_station()
+		_spawn_shop_offers(data.get("shop_offers", []) as Array)
+		GameState.show_toast("Taller: a la venta")
 	# Las salas sin enemigos se completan después de añadir sus recompensas.
 	if (data.get("enemies", []) as Array).is_empty():
 		room.call("_mark_cleared")
@@ -95,41 +98,53 @@ func _drop_loot(loot: Array) -> void:
 	for i in mini(loot.size(), LOOT_SLOTS.size()):
 		_drop_reward(LOOT_SLOTS[i], String(loot[i]))
 
-# El taller es una estación fija de la sala: tocarla abre la compra (doc 07 §13).
-func _spawn_shop_station() -> void:
-	var station := Area2D.new()
-	station.collision_layer = 16
-	station.collision_mask = 1
-	var shape := CollisionShape2D.new()
-	var circle := CircleShape2D.new()
-	circle.radius = 56.0
-	shape.shape = circle
-	station.add_child(shape)
-	station.position = Vector2(150, 460)
+# El taller expone su propia pool: las ofertas se enseñan en la sala con su
+# precio y tocarlas abre el panel de compra (doc 07 §13).
+const SHOP_SLOTS: Array[Vector2] = [
+	Vector2(340, 400), Vector2(520, 400), Vector2(700, 400),
+]
 
-	var visual := Polygon2D.new()
-	visual.polygon = PackedVector2Array([-44, -30, 44, -30, 44, 30, -44, 30])
-	visual.color = Color(0.55, 0.42, 0.24)
-	station.add_child(visual)
+var _shop_offers: Array = []
+var _shop_offer_nodes: Array = []
 
-	var label := Label.new()
-	label.text = "TALLER\ntocar para entrar"
-	label.position = Vector2(-80, -92)
-	label.size = Vector2(160, 58)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 18)
-	label.add_theme_color_override("font_color", Color(0.32, 0.24, 0.14))
-	station.add_child(label)
+func _spawn_shop_offers(offers: Array) -> void:
+	_shop_offers = offers.duplicate()
+	_shop_offer_nodes.clear()
+	var header := Label.new()
+	header.text = "A LA VENTA"
+	header.position = Vector2(420, 322)
+	header.size = Vector2(200, 30)
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_color_override("font_color", Color(0.32, 0.24, 0.14))
+	current_room.add_child(header)
+	var shown := GameState.visible_shop_offers(offers.size())
+	for i in mini(offers.size(), SHOP_SLOTS.size()):
+		var offer := preload("res://gameplay/pickups/shop_offer.gd").new()
+		offer.item_id = String(offers[i])
+		offer.enabled = i < shown
+		current_room.add_child(offer)
+		offer.global_position = SHOP_SLOTS[i]
+		offer.chosen.connect(_on_shop_offer_chosen)
+		_shop_offer_nodes.append(offer)
 
-	station.body_entered.connect(_on_shop_station_entered)
-	current_room.add_child(station)
+# Al cerrar el panel puede haberse gastado la llave: la tercera oferta aparece.
+func _refresh_shop_offers() -> void:
+	var shown := GameState.visible_shop_offers(_shop_offer_nodes.size())
+	for i in _shop_offer_nodes.size():
+		var offer = _shop_offer_nodes[i]
+		if is_instance_valid(offer):
+			offer.call("set_enabled", i < shown)
 
-func _on_shop_station_entered(body: Node) -> void:
-	if not body.is_in_group("player"):
-		return
+func _on_shop_offer_chosen(_item_id: String) -> void:
 	if not GameState.is_running or not is_instance_valid(shop_panel):
 		return
-	shop_panel.call("open")
+	if _panel_open():
+		return
+	shop_panel.call("open", _shop_offers)
+
+func _on_shop_closed() -> void:
+	_refresh_shop_offers()
 
 func _on_room_cleared() -> void:
 	if not GameState.is_running or _transitioning:

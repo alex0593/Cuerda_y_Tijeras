@@ -3,11 +3,15 @@
 # tocar fuera cancela y la partida queda congelada mientras se decide.
 extends CanvasLayer
 
+# Avisa a Main para que refresque las ofertas expuestas en la sala.
+signal closed
+
 const PANEL_SIZE := Vector2(880, 468)
 const ITEM_SIZE := Vector2(270, 74)
 const ACTION_SIZE := Vector2(300, 74)
 
 var is_open := false
+var offers: Array = []
 var _pending_item := ""
 var _dim: ColorRect = null
 var _title: Label = null
@@ -67,9 +71,10 @@ func _on_dim_input(event: InputEvent) -> void:
 	if (event is InputEventScreenTouch and event.pressed) or (event is InputEventMouseButton and event.pressed):
 		_close()
 
-func open() -> void:
+func open(p_offers: Array = []) -> void:
 	if is_open or visible or not GameState.is_running:
 		return
+	offers = p_offers.duplicate()
 	_pending_item = ""
 	_render_catalog()
 	is_open = true
@@ -83,6 +88,7 @@ func _close() -> void:
 	visible = false
 	_pending_item = ""
 	get_tree().paused = false
+	closed.emit()
 
 # --- Vistas -----------------------------------------------------------------
 
@@ -107,26 +113,45 @@ func _centered(control: Control) -> CenterContainer:
 func _render_catalog() -> void:
 	_clear_body()
 	_title.text = "TALLER"
-	_hint.text = "Hilos: %d · toca para comprar" % GameState.threads
+	_hint.text = "Hilos: %d · Llaves: %d · toca para comprar" % [GameState.threads, GameState.keys]
 	var grid := _make_grid()
-	for item_id in _catalog():
+	var catalog := _catalog()
+	if catalog.is_empty():
+		var empty := Label.new()
+		empty.text = "No queda nada a la venta"
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_color_override("font_color", Color(0.86, 0.84, 0.80))
+		grid.add_child(empty)
+	for item_id in catalog:
 		grid.add_child(_make_item_button(item_id))
 	_body.add_child(_centered(grid))
 
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 16)
-	actions.add_child(_make_repair_button())
-	actions.add_child(_make_action_button("Salir", _close))
-	_body.add_child(actions)
+	# La llave compra hilos de acceso: abre la tercera oferta de la pool.
+	var first := _actions_row()
+	first.add_child(_make_repair_button())
+	if not GameState.shop_extra_unlocked:
+		first.add_child(_make_key_button())
+	_body.add_child(first)
 
-# El catálogo es todo el contenido de items salvo el arma inicial:
-# la jugadora compra exactamente lo que quiere (decisión 2026-09-25).
+	var second := _actions_row()
+	if not GameState.shop_extra_unlocked:
+		second.add_child(_make_unlock_button())
+	second.add_child(_make_action_button("Salir", _close))
+	_body.add_child(second)
+
+func _actions_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	return row
+
+# Solo lo expuesto en la sala: la pool exclusiva del taller (doc 07 §13).
 func _catalog() -> Array:
+	var shown := GameState.visible_shop_offers(offers.size())
 	var out: Array = []
-	for item_id in SynergyDB.items_data.keys():
-		if String(item_id) != "scissors_basic":
-			out.append(String(item_id))
+	for i in shown:
+		out.append(String(offers[i]))
 	return out
 
 func _make_item_button(item_id: String) -> Button:
@@ -158,6 +183,32 @@ func _make_repair_button() -> Button:
 	button.add_theme_font_size_override("font_size", 18)
 	button.disabled = not bool(info["allowed"])
 	button.pressed.connect(_on_repair_pressed)
+	return button
+
+func _make_key_button() -> Button:
+	var info := GameState.get_key_info()
+	var allowed := bool(info.get("allowed", false))
+	var status := "%d hilos" % int(info.get("cost", 0)) if allowed else String(info.get("reason", ""))
+	var button := Button.new()
+	button.custom_minimum_size = ACTION_SIZE
+	button.text = "Comprar llave\n%s" % status
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 18)
+	button.disabled = not allowed
+	button.pressed.connect(_on_key_pressed)
+	return button
+
+# Una llave se gasta aquí: abre la tercera oferta de la pool exclusiva.
+func _make_unlock_button() -> Button:
+	var info := GameState.get_unlock_info()
+	var allowed := bool(info.get("allowed", false))
+	var button := Button.new()
+	button.custom_minimum_size = ACTION_SIZE
+	button.text = "Oferta extra\n%s" % ("1 llave" if allowed else String(info.get("reason", "")))
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", 18)
+	button.disabled = not allowed
+	button.pressed.connect(_on_unlock_pressed)
 	return button
 
 func _make_action_button(text: String, handler: Callable) -> Button:
@@ -236,4 +287,18 @@ func _on_repair_pressed() -> void:
 		GameState.show_toast("Vida reparada")
 	else:
 		GameState.show_toast(String(GameState.get_repair_info().get("reason", "no se pudo reparar")))
+	_render_catalog()
+
+func _on_key_pressed() -> void:
+	if GameState.buy_key():
+		GameState.show_toast("Llave comprada")
+	else:
+		GameState.show_toast(String(GameState.get_key_info().get("reason", "no se pudo comprar")))
+	_render_catalog()
+
+func _on_unlock_pressed() -> void:
+	if GameState.unlock_shop_offer():
+		GameState.show_toast("Oferta extra abierta")
+	else:
+		GameState.show_toast(String(GameState.get_unlock_info().get("reason", "no se pudo abrir")))
 	_render_catalog()

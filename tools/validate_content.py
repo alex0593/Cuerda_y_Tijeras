@@ -41,20 +41,17 @@ for rarity in ("común", "especial", "rara"):
 shop = economy.get("shop", {})
 if shop.get("repair_cost", 0) <= 0: errors.append("economy.json repair_cost inválido")
 if shop.get("repair_amount", 0) <= 0: errors.append("economy.json repair_amount inválido")
-if shop.get("key_cost", 0) <= 0: errors.append("economy.json key_cost inválido")
+if shop.get("entry_cost", 0) <= 0: errors.append("economy.json entry_cost inválido")
 offers = shop.get("offers", 0)
-offers_with_key = shop.get("offers_with_key", 0)
 if not isinstance(offers, int) or offers <= 0:
     errors.append("economy.json offers inválido")
-if not isinstance(offers_with_key, int) or offers_with_key < offers:
-    errors.append("economy.json offers_with_key debe ser >= offers")
 # pool exclusiva del taller: solo se vende allí (doc 07 §13)
 pool = economy.get("shop_pool")
 if not isinstance(pool, list) or not pool:
     errors.append("economy.json shop_pool debe ser una lista no vacía")
-elif isinstance(offers_with_key, int) and offers_with_key > 0:
-    if len(pool) < offers_with_key:
-        errors.append(f"economy.json shop_pool necesita al menos {offers_with_key} objetos")
+elif isinstance(offers, int) and offers > 0:
+    if len(pool) < offers:
+        errors.append(f"economy.json shop_pool necesita al menos {offers} objetos")
     if len(set(pool)) != len(pool):
         errors.append("economy.json shop_pool repite objetos")
     for pid in pool:

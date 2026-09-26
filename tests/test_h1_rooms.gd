@@ -50,18 +50,17 @@ func _run() -> void:
 	_check(scene.room_index >= 2, "entrar en la salida debe avanzar de sala")
 	_check(is_instance_valid(scene.current_room) and String(scene.current_room.kind) == "treasure", "la siguiente sala debe ser treasure")
 
-	# La sala de tesoro deja los objetos que ofrece el generador; Cogemos el primero
-	# y comprobamos que entra en el inventario por identificador de contenido.
+	# Ninguna sala regala objetos: la de tesoro solo deja hilos en el suelo.
 	var treasure = scene.current_room
+	_check((treasure.room_data.get("offers", []) as Array).is_empty(), "las salas ya no ofrecen objetos gratis")
 	var pickups: Array = treasure.find_children("*", "Area2D", true, false)
-	_check(not pickups.is_empty(), "treasure debe crear pickups de recompensa")
+	_check(not pickups.is_empty(), "tesoro debe crear pickups de hilo")
 	if not pickups.is_empty() and player:
-		var offered: Array = treasure.room_data.get("offers", [])
-		_check(offered.size() == 3, "treasure debe ofrecer 3 objetos")
+		var threads_before: int = state.threads
 		player.global_position = (pickups[0] as Node2D).global_position
 		await physics_frame
 		await physics_frame
-		_check(not offered.is_empty() and String(offered[0]) in state.items, "el jugador debe recoger el objeto ofrecido")
+		_check(state.threads > threads_before, "el jugador debe recoger el hilo del suelo")
 
 	# Escudo: frontal reduce el daño y trasero lo rompe.
 	var soldier = load("res://gameplay/enemies/tin_soldier.tscn").instantiate()

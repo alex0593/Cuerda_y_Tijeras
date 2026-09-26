@@ -17,7 +17,7 @@ func _run() -> void:
 		quit(1)
 		return
 	state.start_run(303)
-	state.swap_item("scissors_precision", "scissors_basic")
+	state.add_item("scissors_precision")
 	state.add_item("spring_jumper")
 	state.add_item("music_box")
 	state.add_item("taut_thread")

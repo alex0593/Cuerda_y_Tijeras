@@ -26,15 +26,14 @@ func _run() -> void:
 
 	state.start_run(2026)
 	_check((state.get_slot_items("weapon") as Array).has("scissors_basic"), "el arma inicial debe ocupar el slot weapon")
-	# El arma es un slot de 1: cambiarla también es una decisión de la jugadora.
-	var weapon_info: Dictionary = state.get_swap_info("scissors_precision")
-	_check(bool(weapon_info.get("needs_swap", false)), "el arma llena debe admitir cambio")
-	_check(state.swap_item("scissors_precision", "scissors_basic"), "una nueva arma debe entrar en el slot")
-	_check(not (state.items as Array).has("scissors_basic"), "reemplazar arma debe retirar la anterior")
+	# Sin límite de huecos: todo lo que aparece se puede llevar, y la tijera de
+	# precisión es una mejora que se aplica al tenerla (doc 07 §13).
+	_check(state.add_item("scissors_precision"), "la tijera de precisión debe entrar sin sustituir nada")
+	_check((state.items as Array).has("scissors_basic"), "el arma inicial se conserva: no hay límite que lo expulse")
 	_check(state.add_item("spring_jumper"), "mecanismo debe ocupar su slot")
-	_check(state.add_item("iron_magnet"), "el segundo mecanismo provisional debe caber")
+	_check(state.add_item("iron_magnet"), "el segundo mecanismo debe caber")
 	_check(state.add_item("taut_thread"), "amuleto debe ocupar su slot")
-	_check(state.add_item("music_box"), "el segundo amuleto provisional debe caber")
+	_check(state.add_item("music_box"), "el segundo amuleto debe caber")
 	_check("trapped_notes" in state.synergies, "música + hilo deben formar notas atrapadas")
 
 	state.life = 2.0

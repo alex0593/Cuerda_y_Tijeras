@@ -21,31 +21,26 @@ func _run() -> void:
 		quit(1)
 		return
 
-	# 1. Cada sala de recompensa ofrece 3 objetos distintos y válidos.
+	# 1. Ninguna sala regala objetos: solo el jefe y la tienda del taller los sueltan.
 	for run_seed in [1, 99, 2026, 777777]:
 		var run: Dictionary = generator.generate_run(run_seed)
-		var reward_rooms := 0
 		for room in run["rooms"]:
 			for error in generator.validate_room(room):
 				failures.append("semilla %d: %s" % [run_seed, error])
-			var offers: Array = room.get("offers", [])
-			if not offers.is_empty():
-				reward_rooms += 1
-			# El arma inicial nunca debe ofrecerse como recompensa.
-			_check(not ("scissors_basic" in offers), "no se debe ofrecer el arma inicial")
-		_check(reward_rooms >= 4, "una partida debe tener al menos 4 salas con objetos")
+			_check((room.get("offers", []) as Array).is_empty(), "las salas ya no ofrecen objetos gratis")
 
 	# 2. Cobertura: con suficientes semillas, todos los objetos deben salir alguna vez.
+	#    La tienda pone 2 de su pool exclusiva y el jefe 1 del resto del catálogo.
 	var reachable := {}
 	var item_ids: Array = db.items_data.keys()
 	for run_seed in range(1, 61):
 		var run: Dictionary = generator.generate_run(run_seed * 7717)
 		for room in run["rooms"]:
-			for item_id in room.get("offers", []):
-				reachable[String(item_id)] = true
-			# La pool del taller solo se alcanza comprando (doc 07 §13).
 			for item_id in room.get("shop_offers", []):
 				reachable[String(item_id)] = true
+			var drop := String(room.get("boss_drop", ""))
+			if drop != "":
+				reachable[drop] = true
 	for item_id in item_ids:
 		if item_id == "scissors_basic":
 			continue

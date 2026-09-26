@@ -1,6 +1,6 @@
 extends SceneTree
 
-# H3: economía de hilos — botín de sala, taller y jefe que suelta objeto.
+# H3: economía de hilos — botín de sala, tienda del taller y jefe que suelta objeto.
 var failures: Array[String] = []
 
 func _init() -> void:
@@ -29,6 +29,7 @@ func _run() -> void:
 		_check(db.get_price(String(item_id)) > 0, "objeto %s sin precio" % item_id)
 	_check(db.get_repair_cost() > 0, "la reparación debe costar hilos")
 	_check(db.get_repair_amount() > 0.0, "la reparación debe curar algo")
+	_check(db.get_entry_cost() > 0, "entrar a la tienda debe costar hilos")
 
 	# 2. Botín de sala: dentro del rango declarado y determinista por semilla.
 	for run_seed in [1, 99, 2026]:
@@ -44,10 +45,11 @@ func _run() -> void:
 			_check(loot.size() >= int(limits[0]) and loot.size() <= int(limits[1]),
 				"sala %s: botín %d fuera de rango %s" % [kind, loot.size(), limits])
 
-	# 3. Alguna sala de recompensa sí debe dejar hilos; sin ellos no hay taller.
+	# 3. Las salas ya no regalan objetos: solo dejan hilos para la tienda.
 	var total_loot := 0
 	for room in (generator.generate_run(4242)["rooms"] as Array):
 		total_loot += (room.get("loot", []) as Array).size()
+		_check((room.get("offers", []) as Array).is_empty(), "las salas no deben ofrecer objetos gratis")
 	_check(total_loot > 0, "una partida debe dejar hilos en el suelo")
 
 	# 4. El jefe siempre suelta un objeto alcanzable y distinto del arma inicial.
@@ -60,6 +62,7 @@ func _run() -> void:
 			_check(boss_drop != "", "el jefe debe soltar un objeto")
 			_check(boss_drop != "scissors_basic", "el jefe no debe soltar el arma inicial")
 			_check(not db.get_item(boss_drop).is_empty(), "boss_drop %s desconocido" % boss_drop)
+			_check(not (String(boss_drop) in db.get_shop_pool()), "el jefe no debe soltar lo exclusivo del taller")
 			drops[boss_drop] = true
 	_check(drops.size() >= 3, "el jefe debe poder soltar varios objetos distintos, no solo %d" % drops.size())
 
@@ -80,21 +83,13 @@ func _run() -> void:
 	_check("iron_magnet" in state.items, "el objeto comprado debe entrar")
 	_check(state.threads == 0, "la compra debe descontar exactamente su precio")
 
-	# 6. Slot lleno: el taller ofrece cambio y solo gasta si se confirma.
+	# 6. Sin límite de huecos: todo lo que aparece se puede llevar.
 	state.threads = 20
-	_check(state.add_item("spring_jumper"), "debe entrar un segundo mecanismo")
-	var full: Dictionary = state.get_buy_info("screws_cork")
-	_check(bool(full.get("needs_swap", false)), "con el slot lleno debe pedir cambio")
-	var candidates: Array = full.get("candidates", [])
-	_check(candidates.size() == 2, "debe ofrecer los 2 mecanismos ocupados")
-	var undecided: Dictionary = state.buy_item("screws_cork")
-	_check(not bool(undecided.get("ok", false)), "sin elegir reemplazo no debe cobrar")
-	_check(state.threads == 20, "un cambio sin confirmar no debe descontar hilos")
-	var swapped: Dictionary = state.buy_item("screws_cork", "spring_jumper")
-	_check(bool(swapped.get("ok", false)), "el cambio confirmado debe aceptarse")
-	_check("screws_cork" in state.items, "el objeto comprado por cambio debe entrar")
-	_check(not ("spring_jumper" in state.items), "el mecanismo elegido debe salir")
-	_check(state.threads == 20 - db.get_price("screws_cork"), "el cambio debe descontar solo su precio")
+	_check(state.add_item("spring_jumper"), "debe entrar un mecanismo")
+	_check(state.add_item("screws_cork"), "debe entrar un segundo mecanismo")
+	_check(state.add_item("taut_thread"), "debe entrar un amuleto")
+	_check(state.add_item("music_box"), "debe entrar un segundo amuleto")
+	_check(state.items.size() >= 6, "el inventario debe admitir todos los objetos")
 
 	# 7. Reparar vida: cuesta hilos y nunca cura de más.
 	state.life = 1.0
@@ -102,22 +97,22 @@ func _run() -> void:
 	_check(state.threads >= repair_price, "el test necesita hilos para reparar")
 	_check(state.buy_repair(), "reparar con hilos suficientes debe funcionar")
 	_check(state.life == minf(state.LIFE_MAX, 1.0 + db.get_repair_amount()), "la reparación debe curar el importe declarado")
-	_check(state.threads == 20 - db.get_price("screws_cork") - repair_price, "la reparación debe descontar su precio")
+	_check(state.threads == 20 - repair_price, "la reparación debe descontar su precio")
 	state.life = state.LIFE_MAX
 	var pointless: Dictionary = state.get_repair_info()
 	_check(not bool(pointless["allowed"]), "con la vida llena no se debe poder reparar")
 	_check(not state.buy_repair(), "reparar con la vida llena debe rechazarse")
 
-	# 8. El taller también pide partida en curso.
+	# 8. La tienda también pide partida en curso.
 	state.end_run(false)
 	paused = false
 	var closed: Dictionary = state.get_buy_info("iron_magnet")
 	_check(not bool(closed.get("allowed", false)), "sin partida no se debe poder comprar")
+	_check(not state.buy_shop_entry().get("ok", false), "sin partida no se debe poder abrir la tienda")
 
-	# 9. Pool exclusiva del taller: solo se vende allí y gira entre partidas.
+	# 9. Pool exclusiva del taller: 2 ofertas por partida y fuera lo que ya llevas.
 	var pool: Array = db.get_shop_pool()
-	_check(pool.size() >= db.get_shop_offers_with_key(),
-		"la pool del taller debe cubrir todas sus ofertas")
+	_check(pool.size() >= db.get_shop_offers(), "la pool del taller debe cubrir sus ofertas")
 	var sold := {}
 	for run_seed in range(1, 21):
 		var run: Dictionary = generator.generate_run(run_seed * 1013)
@@ -125,173 +120,152 @@ func _run() -> void:
 			var kind := String(room.get("kind", ""))
 			var shop: Array = room.get("shop_offers", [])
 			if kind == "workshop":
-				_check(shop.size() == db.get_shop_offers_with_key(),
-					"el taller debe exponer %d ofertas" % db.get_shop_offers_with_key())
+				_check(shop.size() == db.get_shop_offers(),
+					"el taller debe exponer %d ofertas" % db.get_shop_offers())
 			elif not shop.is_empty():
 				_check(false, "solo la sala de taller expone su pool")
 			for item_id in shop:
 				_check(String(item_id) in pool, "el taller vende %s fuera de su pool" % item_id)
-				_check(String(item_id) != "scissors_basic", "el taller no debe vender el arma inicial")
 				sold[String(item_id)] = true
-			for item_id in (room.get("offers", []) as Array):
-				_check(not (String(item_id) in pool),
-					"%s no debe caer gratis si pertenece a la pool del taller" % item_id)
 	_check(sold.size() == pool.size(), "con 20 semillas debe girar toda la pool del taller (%d/%d)" % [sold.size(), pool.size()])
-
-	# 10. La llave se compra con hilos y abre la tercera oferta al gastarla.
-	state.start_run(9002)
-	state.keys = 0
-	state.threads = 0
-	state.shop_extra_unlocked = false
-	_check(state.visible_shop_offers(3) == db.get_shop_offers(), "sin llave solo se ven las ofertas base")
-	var no_threads: Dictionary = state.get_key_info()
-	_check(not bool(no_threads["allowed"]) and String(no_threads["reason"]) == "faltan hilos",
-		"sin hilos la llave debe decir que faltan hilos")
-	_check(not state.unlock_shop_offer(), "sin llave no se debe abrir la oferta extra")
-	var no_key: Dictionary = state.get_unlock_info()
-	_check(not bool(no_key["allowed"]) and String(no_key["reason"]) == "falta una llave",
-		"debe explicar que falta una llave")
-	state.threads = int(db.get_key_cost())
-	_check(state.buy_key(), "con hilos suficientes la llave debe comprarse")
-	_check(state.threads == 0, "la llave debe descontar su precio")
-	_check(state.keys == 1, "la llave comprada debe sumarse")
-	_check(not state.buy_key(), "con una llave ya comprada no se debe vender otra")
-	_check(state.unlock_shop_offer(), "con una llave la oferta extra debe abrirse")
-	_check(state.keys == 0, "la llave se gasta al abrir la oferta")
-	_check(state.shop_extra_unlocked, "la oferta extra debe quedar abierta")
-	_check(state.visible_shop_offers(3) == db.get_shop_offers_with_key(),
-		"abierta debe enseñar todas las ofertas de la pool")
-	_check(not state.get_unlock_info().get("allowed", false), "no se debe poder abrir dos veces")
+	# Lo que ya llevas no vuelve a aparecer: la tienda repone con la semilla.
+	state.start_run(9003)
+	state.add_item("scissors_precision")
+	var workshop: Dictionary = (generator.generate_run(9003)["rooms"] as Array)[5]
+	var refreshed: Array = generator.shop_offers_for(workshop, state.items)
+	_check(refreshed.size() == db.get_shop_offers(), "la tienda debe seguir ofreciendo %d objetos" % db.get_shop_offers())
+	_check(not ("scissors_precision" in refreshed), "un objeto ya llevado no debe volver a ofrecerse")
 	state.end_run(false)
 	paused = false
 
-	# 11. El panel del taller se pinta, congela la partida y se cierra limpio.
-	await _run_shop_panel(state)
+	# 10. Entrar a la tienda cuesta un alfiler, o forzarla con hilos.
+	state.start_run(9002)
+	state.alfilers = 0
+	state.threads = 0
+	_check(not state.buy_shop_entry().get("ok", false), "sin alfiler ni hilos no se debe poder abrir")
+	_check(String(state.get_entry_info().get("reason", "")) == "faltan hilos", "debe explicar que faltan hilos")
+	state.threads = int(db.get_entry_cost())
+	_check(state.buy_shop_entry().get("ok", false), "con hilos suficientes se debe poder forzar la tienda")
+	_check(state.shop_open, "la tienda debe quedar abierta")
+	_check(state.threads == 0, "forzar la tienda debe descontar sus hilos")
+	_check(not state.buy_shop_entry().get("ok", false), "abierta no se debe poder abrir dos veces")
+	state.start_run(9004)
+	state.alfilers = 1
+	_check(state.buy_shop_entry().get("ok", false), "con un alfiler se debe poder abrir")
+	_check(state.alfilers == 0, "el alfiler se gasta al abrir")
+	_check(state.shop_open, "la tienda debe quedar abierta")
+	_check(String(state.get_entry_hint()) == "un alfiler o %d hilos" % db.get_entry_cost(),
+		"el aviso debe decir qué falta para abrir")
+	state.end_run(false)
+	paused = false
+
+	# 11. La tienda en la sala: nudo, ofertas en el suelo y compra al pisar.
+	await _run_shop_scene(state)
+
+	# 12. El overlay de pausa es un espejo del estado real de la partida.
+	var scene = load("res://gameplay/main/game.tscn").instantiate()
+	root.add_child(scene)
+	await process_frame
+	await process_frame
+	var overlay := scene.get_node_or_null("PauseOverlay") as CanvasLayer
+	_check(overlay != null, "game.tscn debe tener el overlay de pausa")
+	scene._unhandled_input(_back_event())
+	await process_frame
+	_check(bool(paused) and overlay != null and overlay.visible, "pausar debe mostrar el overlay")
+	# Reanudar lo hace el botón Ⅱ de TouchControls; aquí se simula.
+	paused = false
+	await process_frame
+	_check(overlay != null and not overlay.visible, "el overlay debe desaparecer al reanudar")
+	_check(not bool(paused), "la partida debe quedar corriendo")
+	state.end_run(false)
+	paused = false
+	if is_instance_valid(scene):
+		scene.free()
+	for i in 3:
+		await process_frame
 
 	if failures.is_empty():
-		print("H3_ECONOMY_OK: botín de sala, taller y botín de jefe")
+		print("H3_ECONOMY_OK: botín de sala, tienda y botín de jefe")
 		quit(0)
 	else:
 		for failure in failures:
 			push_error(failure)
 		quit(1)
 
-# Ejercita ui/shop_panel.gd de verdad: construir los botones, congelar y comprar.
-func _run_shop_panel(state: Node) -> void:
-	var content: Node = root.get_node_or_null("SynergyDB")
+# Ejercita la tienda del taller de verdad: nudo, ofertas en el suelo y autocompra.
+func _run_shop_scene(state: Node) -> void:
+	var db: Node = root.get_node_or_null("SynergyDB")
 	var generator: Node = root.get_node_or_null("RoomGenerator")
 	var scene = load("res://gameplay/main/game.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
 	await process_frame
-	var panel = scene.get_node_or_null("ShopPanel")
-	_check(panel != null, "debe existir el panel del taller en game.tscn")
-	if panel == null:
-		if is_instance_valid(scene):
-			scene.free()
-		return
+	# Saltamos a la sala de taller para probar la tienda sin jugar la partida.
+	scene.room_index = 5
+	scene._spawn_current()
+	await process_frame
+	await process_frame
 
-	# Las ofertas salen de la sala de taller de una partida con semilla.
-	var offers: Array = []
+	var workshop: Dictionary = {}
 	for room in (generator.generate_run(4242)["rooms"] as Array):
 		if String(room.get("kind", "")) == "workshop":
-			offers = room.get("shop_offers", []) as Array
-	_check(offers.size() == int(content.get_shop_offers_with_key()),
-		"el taller debe sortear todas las ofertas de su pool")
+			workshop = room
+	_check(not workshop.is_empty(), "debe existir la sala de taller")
 
-	_check(not bool(panel.get("is_open")), "el taller debe arrancar cerrado")
+	# Cerrada: el nudo está y las ofertas no se pueden tocar.
+	_check(_find_label(scene.current_room, "TIENDA CERRADA") != null,
+		"el mostrador debe indicar que la tienda está cerrada")
+	var knots := _find_by_script(scene.current_room, "res://gameplay/pickups/shop_knot.gd")
+	_check(knots.size() == 1, "la tienda cerrada debe tener un nudo")
+	var cards := _find_by_script(scene.current_room, "res://gameplay/pickups/shop_offer.gd")
+	_check(cards.size() == 3, "la tienda debe exponer 2 objetos y la reparación")
+	for card in cards:
+		_check(not bool(card.get("enabled")), "cerrada no se debe poder comprar")
+
+	# Sin alfiler ni hilos el nudo no se corta.
+	state.threads = 0
+	state.alfilers = 0
+	var shot: Area2D = Area2D.new()
+	shot.add_to_group("projectile_player")
+	(knots[0] as Node).emit_signal("area_entered", shot)
+	await process_frame
+	_check(not state.shop_open, "sin recursos el nudo no debe abrir la tienda")
+
+	# Un tiro corta el nudo y cobra la entrada.
 	state.threads = 20
-	state.keys = 0
-	state.shop_extra_unlocked = false
-	var overlay := scene.get_node_or_null("PauseOverlay") as CanvasLayer
-	_check(overlay != null, "game.tscn debe tener el overlay de pausa")
-
-	# Pausa manual: el overlay es un espejo del estado real de la partida.
-	scene._unhandled_input(_back_event())
+	(knots[0] as Node).emit_signal("area_entered", shot)
 	await process_frame
-	_check(bool(paused) and overlay != null and overlay.visible, "pausar debe mostrar el overlay")
+	_check(state.shop_open, "cortar el nudo debe abrir la tienda")
+	_check(state.threads == 20 - int(db.get_entry_cost()), "abrir la tienda debe descontar sus hilos")
+	for card in cards:
+		_check(bool(card.get("enabled")), "abierta se debe poder comprar")
 
-	# El taller se abre por encima de esa pausa: no debe heredar el texto.
-	panel.call("open", offers)
-	await process_frame
-	_check(bool(panel.get("is_open")), "el taller debe abrirse")
-	_check(bool(paused), "el taller debe congelar la partida")
-	_check(overlay != null and not overlay.visible, "el overlay de pausa no debe tapar el taller")
-
-	# Solo se enseñan las ofertas expuestas, no todo el catálogo.
-	var body: Control = panel.get("_body")
-	_check(body != null and body.get_child_count() >= 3, "el taller debe pintar catálogo y acciones")
-	var expected: int = state.visible_shop_offers(offers.size())
-	_check(expected == int(content.get_shop_offers()), "sin llave deben verse %d ofertas" % content.get_shop_offers())
-	var buttons: Array = _grid_buttons(body)
-	_check(buttons.size() == expected, "el taller debe ofrecer %d objetos, no %d" % [expected, buttons.size()])
-
-	var key_button: Button = null
-	var unlock_button: Button = null
-	if body.get_child_count() >= 3:
-		var first_row := body.get_child(1) as Container
-		var second_row := body.get_child(2) as Container
-		_check(first_row != null and first_row.get_child_count() == 2, "debe haber reparación y compra de llave")
-		_check(second_row != null and second_row.get_child_count() == 2, "debe haber oferta extra y salir")
-		if first_row != null and first_row.get_child_count() >= 2:
-			key_button = first_row.get_child(1) as Button
-		if second_row != null and second_row.get_child_count() >= 1:
-			unlock_button = second_row.get_child(0) as Button
-	_check(key_button != null and not key_button.disabled, "con hilos la llave debe estar a la venta")
-	_check(unlock_button != null and unlock_button.disabled, "sin llave la oferta extra debe estar bloqueada")
-
-	# La llave se compra aquí y abre la tercera oferta al gastarla.
+	# Pisar una oferta la compra si hay hilos.
+	var player: Node = scene.current_room.get_tree().get_first_node_in_group("player")
+	var item_card: Node = null
+	var repair_card: Node = null
+	for card in cards:
+		if bool(card.get("is_repair")):
+			repair_card = card
+		elif item_card == null:
+			item_card = card
+	_check(item_card != null and repair_card != null, "debe haber oferta de objeto y de reparación")
+	var price: int = int(db.get_price(String(item_card.get("offer_id"))))
 	var threads_before: int = state.threads
-	if key_button != null:
-		key_button.pressed.emit()
+	(item_card as Node).emit_signal("body_entered", player)
 	await process_frame
-	_check(state.keys == 1, "el taller debe entregar la llave comprada")
-	_check(state.threads == threads_before - int(content.get_key_cost()), "la llave debe descontar su precio")
-	unlock_button = null
-	if body.get_child_count() >= 3:
-		var row := body.get_child(2) as Container
-		if row != null and row.get_child_count() >= 1:
-			unlock_button = row.get_child(0) as Button
-	_check(unlock_button != null and not unlock_button.disabled, "con una llave la oferta extra debe abrirse")
-	if unlock_button != null:
-		unlock_button.pressed.emit()
-	await process_frame
-	_check(state.shop_extra_unlocked, "la oferta extra debe quedar abierta")
-	_check(state.keys == 0, "la llave se gasta al abrir la oferta")
-	buttons = _grid_buttons(body)
-	_check(buttons.size() == offers.size(), "abierta debe enseñar las %d ofertas sorteadas" % offers.size())
+	_check(state.threads == threads_before - price, "pisar una oferta debe descontar exactamente su precio")
+	_check(String(item_card.get("offer_id")) in state.items, "el objeto comprado debe entrar")
+	_check(not bool(item_card.get("enabled")), "una oferta comprada debe desaparecer del suelo")
 
-	# Pulsar una opción compra o pasa a elegir a quién reemplazar.
+	# La reparación también se compra al pisarla.
+	state.life = 1.0
 	threads_before = state.threads
-	var pressed := false
-	for button in buttons:
-		var candidate := button as Button
-		if candidate and not candidate.disabled:
-			candidate.pressed.emit()
-			pressed = true
-			break
-	_check(pressed, "con hilos debe haber al menos una opción comprable")
+	(repair_card as Node).emit_signal("body_entered", player)
 	await process_frame
-	_check(bool(panel.get("is_open")), "comprar no debe cerrar el taller")
-	_check(state.threads <= threads_before, "comprar nunca debe sumar hilos")
-
-	# El botón atrás cierra solo el panel y devuelve el control a la partida.
-	scene._unhandled_input(_back_event())
-	await process_frame
-	_check(not bool(panel.get("is_open")), "atrás debe cerrar el taller")
-	_check(not bool(paused), "cerrar el taller debe reanudar la partida")
-	_check(bool(state.is_running), "cerrar el taller no debe perder la partida")
-	_check(overlay != null and not overlay.visible, "cerrar el taller no debe dejar el overlay de pausa pegado")
-
-	# Si algo reanuda por otro camino (p. ej. el cierre de un panel), el texto
-	# de pausa no puede quedarse en pantalla mientras la partida corre.
-	scene._unhandled_input(_back_event())
-	await process_frame
-	_check(bool(paused) and overlay != null and overlay.visible, "pausar de nuevo debe mostrar el overlay")
-	paused = false
-	await process_frame
-	_check(overlay != null and not overlay.visible, "el overlay debe desaparecer al reanudar")
-	_check(not bool(paused), "la partida debe quedar corriendo")
+	_check(state.life > 1.0, "pisar la reparación debe curar")
+	_check(state.threads == threads_before - int(db.get_repair_cost()), "la reparación debe descontar su precio")
+	shot.queue_free()
 
 	state.end_run(false)
 	paused = false
@@ -300,19 +274,19 @@ func _run_shop_panel(state: Node) -> void:
 	for i in 3:
 		await process_frame
 
-func _grid_buttons(body: Control) -> Array:
+func _find_by_script(node: Node, path: String) -> Array:
 	var out: Array = []
-	if body == null or body.get_child_count() < 1:
-		return out
-	var wrapper := body.get_child(0) as CenterContainer
-	if wrapper == null or wrapper.get_child_count() < 1:
-		return out
-	var grid := wrapper.get_child(0) as GridContainer
-	if grid == null:
-		return out
-	for child in grid.get_children():
-		out.append(child)
+	for child in node.find_children("*", "Node", true, false):
+		var script: Script = child.get_script()
+		if script and String((script as Script).resource_path) == path:
+			out.append(child)
 	return out
+
+func _find_label(node: Node, text: String) -> Label:
+	for child in node.find_children("*", "Label", true, false):
+		if (child as Label).text == text:
+			return child
+	return null
 
 func _back_event() -> InputEventKey:
 	var key := InputEventKey.new()

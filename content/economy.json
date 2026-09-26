@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "loot": {
     "start": [0, 0],
     "combat": [2, 4],
@@ -9,5 +9,12 @@
     "boss": [0, 0]
   },
   "prices": {"común": 5, "especial": 8, "rara": 12},
-  "shop": {"repair_cost": 6, "repair_amount": 1.0}
+  "shop": {
+    "repair_cost": 6,
+    "repair_amount": 1.0,
+    "key_cost": 6,
+    "offers": 2,
+    "offers_with_key": 3
+  },
+  "shop_pool": ["scissors_precision", "music_box", "glass_eye", "iron_magnet", "toy_glue"]
 }

@@ -92,6 +92,21 @@ func get_repair_cost() -> int:
 func get_repair_amount() -> float:
 	return float(_map(economy_data.get("shop", {})).get("repair_amount", 0.0))
 
+func get_key_cost() -> int:
+	return int(_map(economy_data.get("shop", {})).get("key_cost", 0))
+
+# Ofertas del taller: cuántas se enseñan y cuántas se ven gastando una llave.
+func get_shop_offers() -> int:
+	return int(_map(economy_data.get("shop", {})).get("offers", 0))
+
+func get_shop_offers_with_key() -> int:
+	return int(_map(economy_data.get("shop", {})).get("offers_with_key", 0))
+
+# Pool exclusiva del taller: estos objetos no se ofrecen gratis en ninguna sala.
+func get_shop_pool() -> Array:
+	var value = economy_data.get("shop_pool", null)
+	return value if value is Array else []
+
 # Rango [mín, máx] de hilos que suelta una sala; [-1, -1] si el tipo no existe.
 func get_loot_range(room_kind: String) -> Array:
 	var value = _map(economy_data.get("loot", {})).get(room_kind, null)
@@ -170,6 +185,27 @@ func validate_content() -> Array[String]:
 			errors.append("economy.json necesita repair_cost positivo")
 		if get_repair_amount() <= 0.0:
 			errors.append("economy.json necesita repair_amount positivo")
+		if get_key_cost() <= 0:
+			errors.append("economy.json necesita key_cost positivo")
+		var offers := get_shop_offers()
+		var offers_with_key := get_shop_offers_with_key()
+		if offers <= 0:
+			errors.append("economy.json necesita offers positivo")
+		if offers_with_key < offers:
+			errors.append("economy.json offers_with_key debe ser mayor o igual que offers")
+		var pool := get_shop_pool()
+		if pool.size() < offers_with_key:
+			errors.append("economy.json shop_pool necesita al menos %d objetos" % offers_with_key)
+		var seen := {}
+		for value in pool:
+			var pool_item := String(value)
+			if not items_data.is_empty() and not items_data.has(pool_item):
+				errors.append("economy.json shop_pool pide %s desconocido" % pool_item)
+			if pool_item == "scissors_basic":
+				errors.append("economy.json no puede vender el arma inicial")
+			if seen.has(pool_item):
+				errors.append("economy.json shop_pool repite %s" % pool_item)
+			seen[pool_item] = true
 		var loot := _map(economy_data.get("loot", {}))
 		if loot.is_empty():
 			errors.append("economy.json requiere el mapa loot")

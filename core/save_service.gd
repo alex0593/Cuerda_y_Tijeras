@@ -71,6 +71,7 @@ func save_run() -> bool:
 		"kills": GameState.kills,
 		"threads": GameState.threads,
 		"keys": GameState.keys,
+		"shop_extra_unlocked": GameState.shop_extra_unlocked,
 		"run_time": GameState.run_time,
 		"cause_of_death": GameState.cause_of_death,
 	}

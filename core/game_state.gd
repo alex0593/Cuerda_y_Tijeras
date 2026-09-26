@@ -31,6 +31,8 @@ var rooms_visited := 0
 var kills := 0
 var threads := 0
 var keys := 0
+# La tercera oferta del taller se paga con una llave (doc 07 §13).
+var shop_extra_unlocked := false
 var items: Array[String] = ["scissors_basic"]
 var item_charges: Dictionary = {}
 var inventory: Dictionary = {}
@@ -78,6 +80,7 @@ func start_run(p_seed: int = 0) -> void:
 	kills = 0
 	threads = 0
 	keys = 0
+	shop_extra_unlocked = false
 	items = ["scissors_basic"]
 	item_charges.clear()
 	_rebuild_inventory()
@@ -332,6 +335,60 @@ func buy_repair() -> bool:
 	heal(SynergyDB.get_repair_amount())
 	return true
 
+# --- Llaves del taller -------------------------------------------------------
+# Una llave abre la tercera oferta de la pool exclusiva y se gasta al usarla.
+
+func get_key_info() -> Dictionary:
+	var cost := SynergyDB.get_key_cost()
+	var result := {"allowed": false, "reason": "", "cost": cost}
+	if not is_running:
+		result["reason"] = "sin partida en curso"
+	elif shop_extra_unlocked:
+		result["reason"] = "ya está abierta"
+	elif keys > 0:
+		result["reason"] = "ya tienes una llave"
+	elif cost <= 0:
+		result["reason"] = "no está a la venta"
+	elif threads < cost:
+		result["reason"] = "faltan hilos"
+	else:
+		result["allowed"] = true
+	return result
+
+func buy_key() -> bool:
+	var info := get_key_info()
+	if not bool(info["allowed"]):
+		return false
+	threads -= int(info["cost"])
+	keys += 1
+	return true
+
+func get_unlock_info() -> Dictionary:
+	var result := {"allowed": false, "reason": ""}
+	if not is_running:
+		result["reason"] = "sin partida en curso"
+	elif shop_extra_unlocked:
+		result["reason"] = "ya está abierta"
+	elif keys < 1:
+		result["reason"] = "falta una llave"
+	else:
+		result["allowed"] = true
+	return result
+
+# Gasta una llave para enseñar la tercera oferta del taller.
+func unlock_shop_offer() -> bool:
+	var info := get_unlock_info()
+	if not bool(info["allowed"]):
+		return false
+	keys -= 1
+	shop_extra_unlocked = true
+	return true
+
+# Cuántas de las ofertas sorteadas se enseñan ahora mismo (doc 07 §13).
+func visible_shop_offers(total: int) -> int:
+	var shown := SynergyDB.get_shop_offers_with_key() if shop_extra_unlocked else SynergyDB.get_shop_offers()
+	return clampi(total, 0, shown)
+
 func consume_item(item_id: String, amount: int = 1) -> bool:
 	if not (item_id in items) or amount <= 0:
 		return false
@@ -386,6 +443,7 @@ func restore_run(data: Dictionary) -> void:
 	kills = maxi(0, int(data.get("kills", 0)))
 	threads = maxi(0, int(data.get("threads", 0)))
 	keys = maxi(0, int(data.get("keys", 0)))
+	shop_extra_unlocked = bool(data.get("shop_extra_unlocked", false))
 	items = ["scissors_basic"]
 	var saved_items: Array = data.get("items", [])
 	for item_id in saved_items:

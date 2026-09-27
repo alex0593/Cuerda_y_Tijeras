@@ -46,6 +46,7 @@ func _run() -> void:
 	_measure_map(seeds, single)
 	if single < 0:
 		_measure_economy(seeds)
+		_measure_reachability(seeds)
 	_report_problems()
 	_syn.free()
 	_gen.free()
@@ -195,6 +196,152 @@ func _report_depth_curve(seeds: int) -> void:
 			line += "   (taller aquí en %.0f%% de las partidas)" % _share(workshop_at[d].size(), seeds)
 		print(line)
 
+# --- Medida 3: alcanzabilidad del catálogo -------------------------------------
+
+# Qué parte del catálogo se puede llegar a tener jugando, no solo sorteando. El
+# invariante del proyecto es que los 10 objetos son alcanzables; aquí se mide
+# dueño de verdad: se va al taller, se paga la entrada con lo que hay al llegar y
+# se compra lo que salga, y después se recoge lo que suelta el jefe. Las sinergias
+# necesitan dos objetos a la vez, que es mucho más difícil que tenerlos sueltos.
+func _measure_reachability(seeds: int) -> void:
+	var got_items := {}
+	var got_synergies := {}
+	var items_per_run := []
+	var synergies_per_run := []
+	var never_items: Array[String] = []
+	var never_synergies: Array[String] = []
+	for i in seeds:
+		var run: Dictionary = _gen.generate_run(i)
+		var owned: Array[String] = ["scissors_basic"]
+		var shop_room := _workshop_room(run)
+		var budget := _threads_before(run, shop_room)
+		var pins := _pins_before(run, shop_room)
+		_shop(shop_room, owned, budget, pins)
+		# Después del jefe: su objeto, que nunca es uno que ya lleves.
+		var boss := _boss_room(run)
+		var drop := String(_gen.boss_drop_for(boss, owned))
+		if drop != "":
+			owned.append(drop)
+		for item_id in owned:
+			got_items[item_id] = int(got_items.get(item_id, 0)) + 1
+		for synergy_id in _synergies_of(owned):
+			got_synergies[synergy_id] = int(got_synergies.get(synergy_id, 0)) + 1
+		items_per_run.append(owned.size())
+		synergies_per_run.append(_synergies_of(owned).size())
+	print("-- Alcanzabilidad --")
+	print("  (ruta: ir al taller, comprar lo que salga, luego recoger el botín del jefe)")
+	print("  objetos por partida, con el arma inicial: %s" % _range_text(items_per_run))
+	print("  sinergias por partida: %s" % _range_text(synergies_per_run))
+	print("  -- cobertura del catálogo --")
+	for item_id in _syn.items_data.keys():
+		var id := String(item_id)
+		if id == "scissors_basic":
+			continue
+		var times := int(got_items.get(id, 0))
+		if times == 0:
+			never_items.append(id)
+		print("  objeto  %-18s %.0f%% de las partidas" % [id, _share(times, seeds)])
+	for synergy_id in _syn.synergies_data.keys():
+		var sid := String(synergy_id)
+		var times := int(got_synergies.get(sid, 0))
+		# Una sinergia que espera a la entidad shadow todavía no existe en el
+		# catálogo: que no salga no es un invariante roto, es trabajo pendiente.
+		if _waits_for_shadow(sid):
+			print("  sinergia %-18s pendiente de la entidad shadow" % sid)
+			continue
+		if times == 0:
+			never_synergies.append(sid)
+		print("  sinergia %-18s %.0f%% de las partidas" % [sid, _share(times, seeds)])
+	if never_items.is_empty() and never_synergies.is_empty():
+		print("  todo el catálogo y todas las sinergias salen alguna vez")
+	else:
+		print("  NUNCA salen: %s" % ", ".join(never_items + never_synergies))
+		print("  un objeto o sinergia que nunca sale es un invariante roto (doc 05)")
+
+# Compra lo del taller con el presupuesto real del momento de llegar: primero la
+# entrada, y luego los objetos más baratos que paguen. Usa las funciones de
+# verdad del generador, no una copia.
+func _shop(room: Dictionary, owned: Array[String], budget: int, pins: int) -> void:
+	if room.is_empty():
+		return
+	var left := budget
+	if pins > 0:
+		pins -= 1  # Un alfiler abre la entrada sin pagar (D-005).
+	else:
+		left -= int(_syn.get_entry_cost())
+	# Se cogen de más barato a más caro: es lo que hace alguien que quiere
+	# llevarse algo cuando solo le llega para uno de los dos. Recorrerlas en el
+	# orden de las tarjetas borraría a los objetos baratos de la estadística.
+	var offers: Array = []
+	for item_id in _gen.shop_offers_for(room, owned):
+		offers.append(String(item_id))
+	offers.sort_custom(func(a, b): return int(_syn.get_price(a)) < int(_syn.get_price(b)))
+	for item_id in offers:
+		var price := int(_syn.get_price(item_id))
+		if left < price:
+			continue
+		left -= price
+		owned.append(item_id)
+
+# Las sinergias que se formarían con ese inventario, replicando _rebuild_inventory.
+func _synergies_of(owned: Array) -> Array:
+	var out: Array = []
+	for item_id in owned:
+		for synergy_id in _syn.check_for_item(owned, String(item_id)):
+			if not (synergy_id in out):
+				out.append(synergy_id)
+	return out
+
+func _waits_for_shadow(synergy_id: String) -> bool:
+	for required in (_syn.get_synergy(synergy_id).get("needs", []) as Array):
+		if String(required) == "shadow":
+			return true
+	return false
+
+func _workshop_room(run: Dictionary) -> Dictionary:
+	for room in (run.get("rooms", []) as Array):
+		if String(room.get("kind", "")) == "workshop":
+			return room
+	return {}
+
+func _boss_room(run: Dictionary) -> Dictionary:
+	for room in (run.get("rooms", []) as Array):
+		if String(room.get("kind", "")) == "boss":
+			return room
+	return {}
+
+# Hilos y alfileres acumulados al llegar a una sala concreta, caminando desde el
+# inicio y limpiando por el camino lo que haya en las salas anteriores.
+func _threads_before(run: Dictionary, target: Dictionary) -> int:
+	return _walk_until(run, target)["threads"]
+
+func _pins_before(run: Dictionary, target: Dictionary) -> int:
+	return _walk_until(run, target)["pins"]
+
+func _walk_until(run: Dictionary, target: Dictionary) -> Dictionary:
+	var threads := 0
+	var pins := 0
+	var reached := target.is_empty()
+	for room in _exploration_order(run):
+		if not reached:
+			if room == target:
+				reached = true
+			else:
+				threads += _room_threads(room)
+				pins += _room_pins(room)
+				continue
+		if room == target:
+			return {"threads": threads, "pins": pins}
+	return {"threads": threads, "pins": pins}
+
+# Salas ordenadas por distancia a la entrada: el orden en que se explorean.
+func _exploration_order(run: Dictionary) -> Array:
+	var start: Vector2i = _gen.START_CELL
+	var ordered: Array = (run["rooms"] as Array).duplicate()
+	ordered.sort_custom(func(a, b): return _manhattan(
+		a.get("grid", Vector2i.ZERO), start) < _manhattan(b.get("grid", Vector2i.ZERO), start))
+	return ordered
+
 # Hilos que deja una sala: los del suelo más los que sueltan sus enemigos.
 func _room_threads(room: Dictionary) -> int:
 	var total := 0
@@ -233,6 +380,18 @@ func _best_purchase(threads: int, pins: int) -> Dictionary:
 		spent += price
 		bought += 1
 	return {"affordable_items": bought, "spent": spent, "left": left}
+
+# Alfileres que sueltan los enemigos de una sala, con el mismo RNG por muerte.
+func _room_pins(room: Dictionary) -> int:
+	var total := 0
+	var room_seed := int(room.get("seed", 0))
+	for i in (room.get("enemies", []) as Array).size():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = room_seed + i * 7919
+		var roll := rng.randf()
+		if roll >= DROP_THREAD and roll < DROP_ANY:
+			total += 1
+	return total
 
 # Botín exacto que soltarían los enemigos: mismas semillas y mismo orden de
 # aparición que usa la sala, un randf por muerte.

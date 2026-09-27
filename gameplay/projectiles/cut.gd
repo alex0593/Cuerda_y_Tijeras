@@ -16,14 +16,24 @@ func setup(p_dir: Vector2, p_speed: float, p_damage: float, p_from: String) -> v
 	speed = p_speed
 	damage = p_damage
 	from = p_from
+	# Los enemigos añaden el proyectil al árbol antes de configurarlo, así que
+	# el origen tiene que reponerse aquí: si no, sus disparos se quedan con las
+	# capas del jugador y no le hacen daño a la jugadora.
+	_apply_source()
 	if p_from == "player" and "screws_cork" in GameState.items:
 		bounces_left = 1
 	rotation = dir.angle()
 
-func _ready() -> void:
+# El origen decide grupo y capas de colisión.
+func _apply_source() -> void:
+	remove_from_group("projectile_player")
+	remove_from_group("projectile_enemy")
 	add_to_group("projectile_player" if from == "player" else "projectile_enemy")
 	collision_layer = 4 if from == "player" else 8
 	collision_mask = 34 if from == "player" else 1
+
+func _ready() -> void:
+	_apply_source()
 	body_entered.connect(_on_body)
 	area_entered.connect(_on_area)
 

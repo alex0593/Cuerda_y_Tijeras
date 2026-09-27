@@ -47,6 +47,11 @@ func _run() -> void:
 	var player = get_first_node_in_group("player") as Node2D
 	_check(player != null, "debe existir una única jugadora")
 	_check((get_nodes_in_group("player") as Array).size() == 1, "el mapa no puede duplicar a la jugadora")
+	# La jugadora es hija del mapa, no de la sala: si se dibuja antes que el
+	# suelo, desaparece bajo el mapa y no se ve en absoluto.
+	var floor = (start.get_node_or_null("Floor") as Node2D) if is_instance_valid(start) else null
+	_check(is_instance_valid(floor) and player.z_index > floor.z_index,
+		"la jugadora se dibuja por encima del suelo de la sala")
 
 	# 3. Una sala sin visitar está dormida: sin enemigos ni botín.
 	var combat: Node = null

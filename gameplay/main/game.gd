@@ -7,6 +7,8 @@ const LelaScript := preload("res://gameplay/player/lela.tscn")
 
 const START_CELL := Vector2i(0, 0)
 const REPAIR_ID := "repair"
+# Por encima del suelo y los muros de la sala, que van en 0.
+const PLAYER_Z := 5
 const STEP := {"left": Vector2i(-1, 0), "right": Vector2i(1, 0), "up": Vector2i(0, -1), "down": Vector2i(0, 1)}
 const OPPOSITE := {"left": "right", "right": "left", "up": "down", "down": "up"}
 
@@ -123,7 +125,11 @@ func _spawn_player() -> void:
 	player.move_speed *= k.x
 	player.dash_speed *= k.x
 	add_child(player)
-	move_child(player, 0)
+	# La jugadora es hija del mapa, no de la sala, así que sin esto el suelo de
+	# la sala la dibuja encima y desaparece bajo el mapa. El orden de hermanos
+	# ya la pone la última, pero el z_index lo deja explícito y a salvo de que
+	# alguien reordene el árbol.
+	player.z_index = PLAYER_Z
 	var start: RoomScript = rooms.get(START_CELL)
 	# En el centro de la sala, no en la esquina: las esquinas de la pantalla las
 	# cubren los joysticks táctiles, y aparecer debajo de uno hace que la jugadora

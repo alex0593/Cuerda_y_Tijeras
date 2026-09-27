@@ -12,6 +12,12 @@
 extends SceneTree
 
 const DEFAULT_SEEDS := 40
+# Botín de enemigo, replicado de base_enemy._drop(): un único randf por muerte.
+# Por debajo de 0.15 suelta un hilo, entre 0.15 y 0.25 un alfiler, nada más allá.
+const DROP_ANY := 0.25
+const DROP_THREAD := 0.15
+# El taller se paga con un alfiler si hay; si no, con hilos (D-005).
+const REPAIR_HEART_THRESHOLD := 2.0
 
 var _syn: Node = null
 var _gen: Node = null
@@ -38,6 +44,8 @@ func _run() -> void:
 			int(_gen.GENERATOR_VERSION), seeds
 		])
 	_measure_map(seeds, single)
+	if single < 0:
+		_measure_economy(seeds)
 	_report_problems()
 	_syn.free()
 	_gen.free()
@@ -116,6 +124,146 @@ func _dump_run(run_seed: int, run: Dictionary) -> void:
 			",".join(PackedStringArray(room.get("doors", []))),
 			",".join(PackedStringArray(names)), extra,
 		])
+
+# --- Medida 2: economía y botín -----------------------------------------------
+
+# Cuántos hilos entra en una partida y qué se puede hacer con ellos. Cuenta el
+# botín del suelo y el que soltarían los enemigos al limpiarlas todas, tal como
+# lo decide base_enemy._drop() con su RNG por enemigo: así el total es exacto,
+# no una estimación.
+func _measure_economy(seeds: int) -> void:
+	var floor_only := []
+	var with_drops := []
+	var pins := []
+	var can_buy := []
+	var affords_two := []
+	var after_shop := []
+	for i in seeds:
+		var run: Dictionary = _gen.generate_run(i)
+		var floor_threads := _count_floor_threads(run)
+		var drops := _enemy_drops(run)
+		var total_threads := floor_threads + int(drops["threads"])
+		floor_only.append(floor_threads)
+		with_drops.append(total_threads)
+		pins.append(int(drops["pins"]))
+		var buy := _best_purchase(total_threads, int(drops["pins"]))
+		can_buy.append(int(buy["affordable_items"]))
+		affords_two.append(1 if int(buy["affordable_items"]) >= 2 else 0)
+		after_shop.append(int(buy["left"]))
+	print("-- Economía y botín --")
+	print("  (asume limpiar el mapa entero; en una partida real se muere antes)")
+	print("  hilos solo del suelo: %s" % _range_text(floor_only))
+	print("  hilos con el botín de los enemigos: %s" % _range_text(with_drops))
+	print("  alfileres: %s" % _range_text(pins))
+	print("  entrada al taller: %d hilos o 1 alfiler" % int(_syn.get_entry_cost()))
+	print("  objetos comprables por partida: %s" % _range_text(can_buy))
+	print("  partidas que pagan 2 objetos: %.0f%%" % _percent(affords_two, seeds))
+	print("  hilos que quedan tras la compra: %s" % _range_text(after_shop))
+	print("  leer: si 'objetos comprables' es 0 casi siempre, la tienda es decorativa;")
+	print("  si nunca llega a 2, la segunda compra es inalcanzable por diseño.")
+	_report_depth_curve(seeds)
+
+# El total de la partida no es la cifra que decide si la tienda funciona: lo que
+# importa es cuánto hay cuando la jugadora llega al taller. Se acumulan las salas
+# por distancia a la entrada, que es el orden natural en que se explorers, y se
+# dice cuántos hilos hay al llegar a cada profundidad.
+func _report_depth_curve(seeds: int) -> void:
+	var depth := int(_gen.GRID_COLS + _gen.GRID_ROWS - 2)
+	var threads_at := []
+	var workshop_at := []
+	for d in depth + 1:
+		threads_at.append([])
+		workshop_at.append([])
+	for i in seeds:
+		var run: Dictionary = _gen.generate_run(i)
+		var start: Vector2i = _gen.START_CELL
+		var ordered: Array = (run["rooms"] as Array).duplicate()
+		ordered.sort_custom(func(a, b): return _manhattan(
+			a.get("grid", Vector2i.ZERO), start) < _manhattan(b.get("grid", Vector2i.ZERO), start))
+		var threads := 0
+		for d in ordered.size():
+			var room: Dictionary = ordered[d]
+			threads += _room_threads(room)
+			if d <= depth:
+				threads_at[d].append(threads)
+				if String(room.get("kind", "")) == "workshop":
+					workshop_at[d].append(threads)
+	print("  -- al llegar a cada profundidad (0 = solo el inicio) --")
+	for d in depth + 1:
+		var line := "  %d salas: %s" % [d, _range_text(threads_at[d])]
+		if not workshop_at[d].is_empty():
+			line += "   (taller aquí en %.0f%% de las partidas)" % _share(workshop_at[d].size(), seeds)
+		print(line)
+
+# Hilos que deja una sala: los del suelo más los que sueltan sus enemigos.
+func _room_threads(room: Dictionary) -> int:
+	var total := 0
+	for resource_id in (room.get("loot", []) as Array):
+		if String(resource_id) == "thread":
+			total += 1
+	var room_seed := int(room.get("seed", 0))
+	for i in (room.get("enemies", []) as Array).size():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = room_seed + i * 7919
+		if rng.randf() < DROP_THREAD:
+			total += 1
+	return total
+
+# Cuántos objetos de la pool se pueden pagar con lo que entra en una partida.
+# Se paga la entrada (con alfiler si hay) y luego lo más barato primero, que es
+# lo que haría alguien que quiere llevarse algo. Los precios salen de
+# content/items.json, no de aquí.
+func _best_purchase(threads: int, pins: int) -> Dictionary:
+	var left := threads
+	var spent := 0
+	if pins > 0:
+		pins -= 1  # Un alfiler abre la entrada sin pagar (D-005).
+	else:
+		left -= int(_syn.get_entry_cost())
+		spent = int(_syn.get_entry_cost())
+	var prices: Array[int] = []
+	for item_id in (_syn.get_shop_pool() as Array):
+		prices.append(int(_syn.get_price(String(item_id))))
+	prices.sort()
+	var bought := 0
+	for price in prices:
+		if left < price:
+			break
+		left -= price
+		spent += price
+		bought += 1
+	return {"affordable_items": bought, "spent": spent, "left": left}
+
+# Botín exacto que soltarían los enemigos: mismas semillas y mismo orden de
+# aparición que usa la sala, un randf por muerte.
+func _enemy_drops(run: Dictionary) -> Dictionary:
+	var threads := 0
+	var pins := 0
+	for room in (run.get("rooms", []) as Array):
+		var room_seed := int(room.get("seed", 0))
+		var enemies: Array = room.get("enemies", [])
+		for i in enemies.size():
+			# El jefe suelta su objeto garantizado y además pasa por esta ruleta.
+			var rng := RandomNumberGenerator.new()
+			rng.seed = room_seed + i * 7919
+			var roll := rng.randf()
+			if roll >= DROP_ANY:
+				continue
+			if roll < DROP_THREAD:
+				threads += 1
+			else:
+				pins += 1
+	return {"threads": threads, "pins": pins}
+
+func _percent(flags: Array, total: int) -> float:
+	var hits := 0
+	for flag in flags:
+		hits += int(flag)
+	return 100.0 * float(hits) / float(maxi(1, total))
+
+# Porcentaje que representa una cuenta sobre un total de partidas.
+func _share(count: int, total: int) -> float:
+	return 100.0 * float(count) / float(maxi(1, total))
 
 # --- Utilidades ---------------------------------------------------------------
 

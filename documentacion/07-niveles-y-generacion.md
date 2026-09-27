@@ -16,7 +16,17 @@ La jugadora ve un mapa abstracto del camino, no un minimapa detallado que revele
 
 ## 2. Estructura de la partida
 
-Propuesta inicial:
+El vertical slice es **un mapa navegable de 9 salas en rejilla 3x3** (D-006), no un flujo lineal
+de 7 salas. La jugadora camina por el mapa, cruza puertas, puede volver a las salas que ya
+limpió y encuentra las que no ha visto. Todas las salas conservan su estado.
+
+- Inicio y jefe van en **esquinas opuestas**: cruzar el mapa es la decisión de ritmo.
+- El taller se sortea **a dos pasos o más de la entrada**, para que ir a comprar tensione algo.
+- Las 6 salas libres se reparten barajadas con la semilla: 3 combates, 1 tesoro y 2 riesgos.
+- Las puertas están **cerradas hasta limpiar la sala** y se quedan abiertas para siempre.
+- La partida termina al **recoger el objeto que suelta el jefe** (§12.1).
+
+Propuesta de actos (sigue pendiente de validar con la duración real):
 
 - Acto I: 6–8 habitaciones y un jefe.
 - Acto II: 7–10 habitaciones y un jefe.
@@ -85,20 +95,33 @@ Cada plantilla define:
 
 ## 5. Generación de una partida
 
-Algoritmo conceptual:
+Algoritmo del vertical slice (`core/room_generator.gd`, `GENERATOR_VERSION = 7`):
 
-1. Crear un grafo con un número limitado de nodos.
-2. Reservar un nodo inicial, un nodo de taller y un nodo de jefe.
-3. Añadir conexiones con una o dos rutas alternativas.
-4. Asignar el tipo de habitación según la distancia al jefe.
-5. Asignar una plantilla compatible.
-6. Colocar enemigos según el presupuesto de dificultad.
-7. Colocar recompensas y puertas.
-8. Validar que el recorrido sea transitable.
-9. Ejecutar una simulación de tensión.
-10. Guardar la semilla y la versión.
+1. Crear la rejilla 3x3 de celdas; cada celda es una sala de 960x540.
+2. Fijar el inicio en la esquina (0,0) y el jefe en la opuesta (2,2).
+3. Barajar con la semilla las celdas libres y colocar el taller en la primera que esté a dos
+   pasos o más de la entrada.
+4. Repartir las 6 salas libres (3 combates, 1 tesoro, 2 riesgos) barajadas con la semilla.
+5. Asignar una plantilla compatible y colocar enemigos según el presupuesto de dificultad.
+6. Calcular las puertas: cada sala conecta con sus vecinas de la rejilla.
+7. Sortear el botín de hilos, la pool de la tienda (taller) y el objeto del jefe.
+8. Validar el mapa entero y cada sala: cobertura de la rejilla, esquinas fijas, puertas
+   simétricas, tipos de sala y precios.
+9. Guardar la semilla y la versión del generador.
+
+La baraja usa el generador con semilla de la partida, **no** el aleatorio global: con la misma
+semilla el mapa es idéntico.
 
 No se debe construir una habitación generada sin comprobar que la jugadora tiene una ruta segura.
+
+### 5.1 Reglas del mapa
+
+- Las puertas de una sala están cerradas hasta limpiarla; al abrirse, se quedan abiertas.
+- Las salas **no se destruyen** al salir: enemigos muertos, botín sin recoger y tienda abierta
+  se conservan. Volver atrás nunca castiga ni regona.
+- El contenido de una sala (enemigos, hilos, taller) se monta la **primera vez que se entra**,
+  con lo que la jugadora lleve en ese momento, para que la pool nunca repita lo ya recogido.
+- La jugadora es **una sola** en todo el mapa y la cámara la sigue.
 
 ## 6. Presupuesto de dificultad
 
@@ -198,7 +221,7 @@ Los Hilos son la moneda de la partida y se gastan **solo** en el taller. Todo el
   | boss | 0 |
 
 - **Ningún objeto gratis.** Las salas ya no regalan objetos: solo dejan hilos. Los objetos salen de **dos sitios** (D-005): el **suelo del jefe** y la **tienda del taller**.
-- **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto al morir, distinto del arma inicial, generado como `boss_drop` en la semilla y fuera de la pool del taller: lo especial se compra y lo común lo regala el jefe.
+- **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto al morir, distinto del arma inicial, generado como `boss_drop` en la semilla y fuera de la pool del taller: lo especial se compra y lo común lo regala el jefe. **Recoger ese objeto cierra la partida con victoria**; el resumen sale entonces mismo.
 - **Alfileres.** Recurso que cae de los enemigos y se gasta para abrir la tienda del taller (§13).
 
 Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**; forzar la tienda sin alfiler cuesta **6 hilos**.

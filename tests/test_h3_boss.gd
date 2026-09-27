@@ -85,15 +85,32 @@ func _run() -> void:
 
 	# Al morir suelta el objeto garantizado de la sala.
 	boss.set("guaranteed_drop", "item:spring_jumper")
+	boss.set("win_on_pickup", true)
 	boss.take_hit(9999.0, "cut", boss.global_position)
-	await process_frame
+	for i in 3:
+		await process_frame
 	_check(not is_instance_valid(boss), "el jefe debe morir")
 	_check(state.kills == 1, "la baja del jefe debe contar")
-	var dropped := false
+	var dropped: Node = null
 	for pk in get_nodes_in_group("pickup"):
 		if String(pk.get("kind")) == "item:spring_jumper":
-			dropped = true
-	_check(dropped, "el jefe debe soltar el objeto garantizado de la semilla")
+			dropped = pk
+	_check(dropped != null, "el jefe debe soltar el objeto garantizado de la semilla")
+
+	# Recoger ese objeto cierra la partida: es la victoria del vertical slice.
+	var victory := {"won": false}
+	state.run_ended.connect(func(v: bool) -> void: victory["won"] = v, CONNECT_ONE_SHOT)
+	var player: Node = load("res://gameplay/player/lela.tscn").instantiate()
+	root.add_child(player)
+	await process_frame
+	if dropped != null:
+		player.global_position = dropped.global_position
+		for i in 5:
+			await physics_frame
+	_check(bool(victory["won"]), "recoger el botín del jefe debe cerrar la partida con victoria")
+	_check(not bool(state.is_running), "tras la victoria la partida termina")
+	if is_instance_valid(player):
+		player.free()
 
 	state.end_run(false)
 	if failures.is_empty():

@@ -12,8 +12,8 @@ func _init() -> void:
 		push_error(e)
 		err += 1
 	var run: Dictionary = gen.generate_run(12345)
-	if (run["rooms"] as Array).size() != 7:
-		push_error("flow debe tener 7 salas")
+	for e in gen.validate_run(run):
+		push_error(e)
 		err += 1
 	for r in run["rooms"]:
 		for e in gen.validate_room(r):

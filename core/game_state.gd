@@ -26,6 +26,8 @@ var seed_value := 0
 var generator_version := 1
 var run_time := 0.0
 var rooms_visited := 0
+# Cuántas salas tiene el mapa, para el HUD y el resumen.
+var rooms_total := 0
 var kills := 0
 var threads := 0
 var alfilers := 0
@@ -75,6 +77,7 @@ func start_run(p_seed: int = 0) -> void:
 	rewind_charges = REWIND_MAX_CHARGES
 	run_time = 0.0
 	rooms_visited = 0
+	rooms_total = 0
 	kills = 0
 	threads = 0
 	alfilers = 0

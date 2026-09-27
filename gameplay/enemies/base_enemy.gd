@@ -12,6 +12,8 @@ var weak_point_exposed := false
 var drop_rng_seed := 0
 # Botín garantizado ("item:<id>", "thread"...): el jefe siempre suelta algo.
 var guaranteed_drop := ""
+# El botín del jefe cierra la partida: recogerlo termina el recorrido.
+var win_on_pickup := false
 var _drop_rng := RandomNumberGenerator.new()
 var _bind_left := 0.0
 var _thread_left := 0.0
@@ -88,6 +90,7 @@ func _drop() -> void:
 func _spawn_pickup(pickup_kind: String, at: Vector2) -> void:
 	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
 	pk.kind = pickup_kind
+	pk.set("win_on_pickup", win_on_pickup)
 	# El botín nace dentro del impacto que mata al enemigo, justo cuando Godot
 	# está cerrando las consultas de física y no admite un área nueva. Encolarlo
 	# evita el error y deja el botín igual, un instante después.

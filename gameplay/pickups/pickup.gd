@@ -2,6 +2,8 @@
 extends Area2D
 
 @export var kind := "thread"
+# El botín del jefe cierra la partida al recogerlo (doc 07 §12.1).
+var win_on_pickup := false
 var _flash_time := 0.0
 var _rejected := false
 
@@ -72,6 +74,8 @@ func _on_body(body: Node) -> void:
 		GameState.add_resource(kind)
 	if consumed:
 		queue_free()
+		if win_on_pickup and GameState.is_running:
+			GameState.end_run(true)
 
 func _reject_reason(item_id: String) -> String:
 	if item_id in GameState.items:

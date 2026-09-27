@@ -46,8 +46,9 @@ func _format_items(items: Array) -> String:
 	return result
 
 func _process(_delta: float) -> void:
-	info.text = "Sala %d  ⏱ %ds  ☠ %d  Hilos %d  Alfileres %d" % [
-		GameState.rooms_visited, int(GameState.run_time), GameState.kills, GameState.threads, GameState.alfilers
+	info.text = "Salas %d/%d  ⏱ %ds  ☠ %d  Hilos %d  Alfileres %d" % [
+		GameState.rooms_visited, maxi(GameState.rooms_total, 1), int(GameState.run_time),
+		GameState.kills, GameState.threads, GameState.alfilers
 	]
 
 func _on_synergy(sid: String) -> void:

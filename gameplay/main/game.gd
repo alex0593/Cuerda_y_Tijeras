@@ -81,6 +81,8 @@ func _build_map() -> void:
 	camera.limit_top = 0
 	camera.limit_right = int(room_size.x * grid.x)
 	camera.limit_bottom = int(room_size.y * grid.y)
+	_fit_camera(room_size)
+	get_viewport().size_changed.connect(_fit_camera.bind(room_size))
 	for data in (flow["rooms"] as Array):
 		var room: RoomScript = preload("res://gameplay/rooms/room.tscn").instantiate()
 		room.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -91,12 +93,39 @@ func _build_map() -> void:
 		rooms[room.grid_cell] = room
 	GameState.rooms_total = rooms.size()
 
+# Encuadre de la cámara. La sala es más grande que el viewport, así que la
+# cámara puede centrarla; el encuadre se calcula para que la jugadora se vea con
+# tamaño y para que sobre sitio en los dos ejes. Sin esto, en un móvil
+# panorámico (stretch=expand deja el viewport en 960x430) la jugadora acababa
+# pegada al borde de la pantalla al acercarse a un muro.
+#   1.0 = se ve la sala entera; mayor que 1 = más cerca.
+const CAMERA_FILL := 0.72
+
+func _fit_camera(room_size: Vector2) -> void:
+	var view: Vector2 = get_viewport_rect().size
+	if view.x <= 0.0 or view.y <= 0.0 or room_size.x <= 0.0 or room_size.y <= 0.0:
+		return
+	# Acercarse lo justo para que la jugadora ocupe una parte de la pantalla,
+	# pero sin pasarse: en el eje que manda, la vista tiene que ser más pequeña
+	# que la sala, o la cámara no tiene margen y la empuja al borde. El tope de
+	# 1.0 evita alejarse más de la cuenta en pantallas cuadradas.
+	var zoom_x: float = view.x / (room_size.x * CAMERA_FILL)
+	var zoom_y: float = view.y / (room_size.y * CAMERA_FILL)
+	var zoom: float = minf(minf(zoom_x, zoom_y), 1.0)
+	camera.zoom = Vector2(zoom, zoom)
+
 func _spawn_player() -> void:
 	player = LelaScript.instantiate()
+	# La jugadora crece con la sala para conservar la proporción del diseño: si
+	# no, el personaje se quedaría pequeño respecto a los muros y a los enemigos.
+	var k := RoomScript.SCALE
+	player.scale = Vector2(k.x, k.y)
+	player.move_speed *= k.x
+	player.dash_speed *= k.x
 	add_child(player)
 	move_child(player, 0)
 	var start: RoomScript = rooms.get(START_CELL)
-	player.global_position = start.global_position + Vector2(140, 270)
+	player.global_position = start.global_position + Vector2(140.0 * k.x, 270.0 * k.y)
 
 # Entrar en una sala la despierta la primera vez y deja a la jugadora dentro.
 func _enter_room(cell: Vector2i, from_direction: String) -> void:

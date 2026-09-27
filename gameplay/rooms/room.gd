@@ -10,6 +10,11 @@ signal door_entered(direction: String)
 const ROOM_SIZE := Vector2(960, 540)
 const WALL := 20.0
 const DOOR_GAP := 100.0
+# El interior de la sala está diseñado en 960x540 y el nodo se escala al tamaño
+# real de la sala. Así una sala más grande no obliga a rehacer la colocación de
+# muros, cobertura, puertas, botín y taller: se escala todo junto.
+const DESIGN := Vector2(960, 540)
+const SCALE := Vector2(1280.0 / 960.0, 720.0 / 540.0)
 # Dónde aparece la jugadora al entrar por cada puerta, ya dentro de la sala.
 const ENTRY_SPOTS := {
 	"left": Vector2(110, 270),
@@ -54,6 +59,9 @@ func setup(room: Dictionary) -> void:
 	rng.seed = room_seed if room_seed != 0 else int(Time.get_ticks_usec())
 	enemies_to_spawn = (room.get("enemies", []) as Array).duplicate()
 	position = room.get("position", Vector2.ZERO)
+	# El interior sigue en el espacio de diseño; el escalado lleva la sala al
+	# tamaño real del mapa.
+	scale = SCALE
 
 func _ready() -> void:
 	_ready_done = true
@@ -193,9 +201,12 @@ func _spawn_doors() -> void:
 		add_child(label)
 		door_labels[dir] = label
 
-# Punto de aparición al entrar por una puerta concreta.
+# Punto de aparición al entrar por una puerta concreta, en coordenadas de mundo:
+# el interior está en el espacio de diseño, así que hay que aplicarle el
+# escalado de la sala.
 func entry_position(direction: String) -> Vector2:
-	return ENTRY_SPOTS.get(direction, Vector2(480, 270))
+	var at: Vector2 = ENTRY_SPOTS.get(direction, Vector2(480, 270))
+	return Vector2(at.x * SCALE.x, at.y * SCALE.y)
 
 func _on_door_body_entered(body: Node, direction: String) -> void:
 	if is_cleared and body.is_in_group("player"):

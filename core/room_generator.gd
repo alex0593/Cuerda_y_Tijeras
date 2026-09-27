@@ -10,7 +10,11 @@ const GENERATOR_VERSION := 7
 # cruzar el mapa sea la decisión de ritmo de la partida.
 const GRID_COLS := 3
 const GRID_ROWS := 3
-const ROOM_SIZE := Vector2(960, 540)
+# La sala tiene que ser MÁS grande que el viewport en los dos ejes, o la cámara
+# no tiene margen y empuja a la jugadora al borde de la pantalla en cuanto se
+# acerca a un muro. Con stretch=expand, un móvil panorámico (2412x1080) deja el
+# viewport en 960x430, así que 960x540 no daba ningún margen (doc 07 §5.1).
+const ROOM_SIZE := Vector2(1280, 720)
 const START_CELL := Vector2i(0, 0)
 const BOSS_CELL := Vector2i(GRID_COLS - 1, GRID_ROWS - 1)
 # Reparto de las salas libres: 3 combates, 1 tesoro y 2 riesgos.

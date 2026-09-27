@@ -67,6 +67,21 @@ for kind in ROOM_KINDS:
         errors.append(f"economy.json loot.{kind} debe ser [mín, máx] con mín <= máx")
 for kind, value in loot.items():
     if kind not in ROOM_KINDS: errors.append(f"economy.json loot.{kind} tipo de sala desconocido")
+# Cobertura de objetos: cada uno tiene que tener una fuente. La pool del taller
+# se vende en el taller; el jefe suelta el resto del catálogo salvo el arma
+# inicial. Un objeto fuera de ambos solo se perdería, y sus sinergias nunca se
+# formarían.
+boss_pool = {i for i in items["items"]
+             if i != "scissors_basic" and i not in (pool or [])
+             and items["items"][i].get("slot") != "consumable"}
+for iid in items["items"]:
+    if iid == "scissors_basic":
+        continue
+    if iid not in boss_pool and iid not in (pool or []):
+        errors.append(f"objeto {iid} no tiene fuente: ni taller ni jefe lo sueltan")
+# Y al revés: el jefe no debe poder soltar un consumible, que se compra.
+if "repair_coil" in boss_pool:
+    errors.append("repair_coil no debe formar parte del botín del jefe")
 if errors:
     print("ERRORES:"); [print(" -",x) for x in errors]; sys.exit(1)
 print(f"OK: {len(items['items'])} objetos, {len(items['synergies'])} sinergias, {len(enemies['enemies'])} enemigos, economía válida")

@@ -46,6 +46,22 @@ func _run() -> void:
 			continue
 		_check(reachable.has(item_id), "objeto inalcanzable en 60 semillas: %s" % item_id)
 
+	# 2b. El jefe nunca suelta un consumible. Ganar no puede consistir en recoger
+	#     una bobina de reparación, y ese objeto se compra en el taller.
+	for run_seed in range(1, 121):
+		var run: Dictionary = generator.generate_run(run_seed * 331)
+		for room in run["rooms"]:
+			var drop := String(room.get("boss_drop", ""))
+			if drop == "":
+				continue
+			_check(String(db.get_item(drop).get("slot", "")) != "consumable",
+				"el jefe no debe soltar un consumible: %s (semilla %d)" % [drop, run_seed])
+		# Y el reemplazo en tiempo de partida tampoco puede caer en un consumible.
+		var owned := ["scissors_basic"]
+		var fallback := String(generator.boss_drop_for(
+			{"seed": run_seed, "boss_drop": "repair_coil"}, owned))
+		_check(fallback != "repair_coil", "boss_drop_for no debe devolver un consumible")
+
 	# 3. Determinismo: la misma semilla ofrece los mismos objetos.
 	var a: Dictionary = generator.generate_run(4242)
 	var b: Dictionary = generator.generate_run(4242)

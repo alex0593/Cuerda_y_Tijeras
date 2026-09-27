@@ -15,5 +15,5 @@
     "entry_cost": 6,
     "offers": 2
   },
-  "shop_pool": ["scissors_precision", "music_box", "glass_eye", "iron_magnet", "toy_glue"]
+  "shop_pool": ["scissors_precision", "music_box", "glass_eye", "iron_magnet", "toy_glue", "repair_coil"]
 }

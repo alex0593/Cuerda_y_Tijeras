@@ -146,13 +146,26 @@ func _roll_loot(rng: RandomNumberGenerator, kind: String) -> Array:
 # El jefe suelta un objeto del catálogo que no sea de la pool del taller:
 # lo especial se compra en la tienda y lo común lo regala el jefe (doc 07 §13).
 func _pick_boss_drop(rng: RandomNumberGenerator) -> String:
+	var drops := _draw_weighted(rng, _boss_reward_pool(), 1)
+	return String(drops[0]) if not drops.is_empty() else ""
+
+# Lo que el jefe puede soltar: objetos del catálogo que no se conservan ni se
+# compran en el taller. Un consumible no vale como recompensa final —la bobina
+# de reparación se compra en el taller— y menos como objeto que cierra la
+# partida: ganar no puede consistir en recoger una bobina de reparación.
+func _boss_reward_pool() -> Array:
 	var pool: Array = []
 	for item_id in _item_ids():
-		if item_id in NON_REWARD_ITEMS or item_id in _shop_pool():
+		var id := String(item_id)
+		if id in NON_REWARD_ITEMS or id in _shop_pool():
 			continue
-		pool.append(item_id)
-	var drops := _draw_weighted(rng, pool, 1)
-	return String(drops[0]) if not drops.is_empty() else ""
+		if String(_item(id).get("slot", "")) == "consumable":
+			continue
+		pool.append(id)
+	return pool
+
+func _is_consumable(item_id: String) -> bool:
+	return String(_item(item_id).get("slot", "")) == "consumable"
 
 # Ofertas de la compra: se dibujan de la pool exclusiva de content/economy.json.
 func _pick_shop_offers(rng: RandomNumberGenerator) -> Array:
@@ -275,14 +288,12 @@ func shop_offers_for(room: Dictionary, owned: Array) -> Array:
 # Botín del jefe para esta partida: nunca un objeto que ya lleves.
 func boss_drop_for(room: Dictionary, owned: Array) -> String:
 	var drop := String(room.get("boss_drop", ""))
-	if drop != "" and not (drop in owned):
+	if drop != "" and not (drop in owned) and not _is_consumable(drop):
 		return drop
 	var pool: Array = []
-	for item_id in _item_ids():
-		var id := String(item_id)
-		if id in NON_REWARD_ITEMS or id in _shop_pool() or id in owned:
-			continue
-		pool.append(id)
+	for item_id in _boss_reward_pool():
+		if not (String(item_id) in owned):
+			pool.append(String(item_id))
 	if pool.is_empty():
 		return ""
 	var rng := RandomNumberGenerator.new()
@@ -340,6 +351,10 @@ func validate_room(room: Dictionary) -> Array[String]:
 	if kind == "boss":
 		if boss_drop == "" or _item(boss_drop).is_empty() or boss_drop in NON_REWARD_ITEMS or boss_drop in _shop_pool():
 			errors.append("boss_drop debe ser un objeto alcanzable distinto del inicial")
+		elif _is_consumable(boss_drop):
+			# Ganar no puede consistir en recoger una bobina de reparación: el
+			# consumible se compra en el taller y no ocupa un hueco de los tres.
+			errors.append("boss_drop no puede ser un consumible: %s" % boss_drop)
 	elif boss_drop != "":
 		errors.append("solo la sala de jefe define boss_drop")
 	# El taller vende su propia pool: ofertas únicas, con precio y alcanzables.

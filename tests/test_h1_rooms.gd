@@ -89,17 +89,21 @@ func _run() -> void:
 	_check(visible_world.x <= room_size.x or visible_world.y <= room_size.y,
 		"la vista debe ser más pequeña que la sala en al menos un eje: vista %s, sala %s" % [str(visible_world.round()), str(room_size)])
 	# Pegada a la esquina de la sala, la jugadora sigue dentro de la pantalla.
+	# La conversión a píxeles de pantalla tiene que multiplicar por el zoom: el
+	# centro de la cámara va en unidades de mundo y la vista en píxeles.
 	player.global_position = start.global_position + Vector2(60, 60)
 	await process_frame
 	await process_frame
-	var on_screen: Vector2 = (player.global_position - cam.get_screen_center_position()) + view * 0.5
+	var centre: Vector2 = cam.get_screen_center_position()
+	var on_screen: Vector2 = (player.global_position - centre) * cam.zoom + view * 0.5
 	_check(on_screen.x > 0.0 and on_screen.x < view.x and on_screen.y > 0.0 and on_screen.y < view.y,
 		"la jugadora no puede salirse de la pantalla: está en %s de %s" % [str(on_screen.round()), str(view.round())])
-	# Y tiene que ocupar una parte visible de la pantalla, no ser una mota.
-	var body_size := 36.0 * float(player.scale.x)
-	var share: float = body_size / visible_world.y
-	_check(share > 0.04, "la jugadora ocupa solo el %.1f%% de la pantalla: es demasiado pequeña" % (share * 100.0))
-	player.global_position = start.global_position + Vector2(640, 360)
+	# Y tiene que ocupar una parte visible de la pantalla, no ser una mota. En un
+	# móvil panorámico mide alrededor del 5%; en el viewport cuadrado del test
+	# headless baja, porque ahí se ve mucho más mundo.
+	var share: float = 36.0 * cam.zoom.y / view.y
+	_check(share > 0.02, "la jugadora ocupa solo el %.1f%% de la pantalla: es demasiado pequeña" % (share * 100.0))
+	player.global_position = start.global_position + Vector2(864, 486)
 	await process_frame
 
 	# 4. Limpiar la sala abre sus puertas y no se deshace.

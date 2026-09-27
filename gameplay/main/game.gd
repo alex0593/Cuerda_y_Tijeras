@@ -9,6 +9,10 @@ const START_CELL := Vector2i(0, 0)
 const REPAIR_ID := "repair"
 # Por encima del suelo y los muros de la sala, que van en 0.
 const PLAYER_Z := 5
+# Velocidad de la jugadora con la sala al 180%. Antes iba a 220 con la sala a
+# 960x540: cruzar una sala costaba 4,4 s y con la sala grande costaría 7,9 s.
+const PLAYER_SPEED := 260.0
+const PLAYER_DASH_SPEED := 560.0
 const STEP := {"left": Vector2i(-1, 0), "right": Vector2i(1, 0), "up": Vector2i(0, -1), "down": Vector2i(0, 1)}
 const OPPOSITE := {"left": "right", "right": "left", "up": "down", "down": "up"}
 
@@ -118,12 +122,13 @@ func _fit_camera(room_size: Vector2) -> void:
 
 func _spawn_player() -> void:
 	player = LelaScript.instantiate()
-	# La jugadora crece con la sala para conservar la proporción del diseño: si
-	# no, el personaje se quedaría pequeño respecto a los muros y a los enemigos.
+	# La jugadora NO crece con la sala: la sala se agranda para dar margen a la
+	# cámara, y agrandar también el personaje lo que hace es ponerle media
+	# pantalla. Se queda en su tamaño de diseño y sube un poco la velocidad para
+	# que cruzar una sala más grande no alargue la partida.
 	var k := RoomScript.SCALE
-	player.scale = Vector2(k.x, k.y)
-	player.move_speed *= k.x
-	player.dash_speed *= k.x
+	player.move_speed = PLAYER_SPEED
+	player.dash_speed = PLAYER_DASH_SPEED
 	add_child(player)
 	# La jugadora es hija del mapa, no de la sala, así que sin esto el suelo de
 	# la sala la dibuja encima y desaparece bajo el mapa. El orden de hermanos

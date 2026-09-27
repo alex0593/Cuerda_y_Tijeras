@@ -12,9 +12,12 @@ const GRID_COLS := 3
 const GRID_ROWS := 3
 # La sala tiene que ser MÁS grande que el viewport en los dos ejes, o la cámara
 # no tiene margen y empuja a la jugadora al borde de la pantalla en cuanto se
-# acerca a un muro. Con stretch=expand, un móvil panorámico (2412x1080) deja el
-# viewport en 960x430, así que 960x540 no daba ningún margen (doc 07 §5.1).
-const ROOM_SIZE := Vector2(1280, 720)
+# acerca a un muro. Con stretch=expand el alto del viewport se queda en 540 y
+# el ancho se ensancha: en un móvil panorámico (2412x1080) el viewport queda en
+# 1206x540. La sala va a 1728x972, un 80% más grande, para que la cámara pueda
+# encuadrar algo más de la mitad de la sala y la jugadora no ocupe media
+# pantalla (doc 07 §5.1).
+const ROOM_SIZE := Vector2(1728, 972)
 const START_CELL := Vector2i(0, 0)
 const BOSS_CELL := Vector2i(GRID_COLS - 1, GRID_ROWS - 1)
 # Reparto de las salas libres: 3 combates, 1 tesoro y 2 riesgos.

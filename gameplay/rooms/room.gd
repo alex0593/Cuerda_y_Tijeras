@@ -14,7 +14,7 @@ const DOOR_GAP := 100.0
 # real de la sala. Así una sala más grande no obliga a rehacer la colocación de
 # muros, cobertura, puertas, botín y taller: se escala todo junto.
 const DESIGN := Vector2(960, 540)
-const SCALE := Vector2(1280.0 / 960.0, 720.0 / 540.0)
+const SCALE := Vector2(1728.0 / 960.0, 972.0 / 540.0)
 # Dónde aparece la jugadora al entrar por cada puerta, ya dentro de la sala.
 const ENTRY_SPOTS := {
 	"left": Vector2(110, 270),
@@ -248,6 +248,10 @@ func _spawn_enemies() -> void:
 				e = preload("res://gameplay/enemies/boss_caja_cero.tscn").instantiate()
 		if e == null:
 			continue
+		# La sala se agranda para dar margen a la cámara, pero los enemigos
+		# conservan su tamaño y su alcance: si no, crecerían con la sala y el
+		# combate cambiaría sin tocar el balance.
+		e.scale = Vector2.ONE / SCALE
 		e.set("drop_rng_seed", room_seed + i * 7919)
 		if eid == "caja_cero":
 			# El jefe suelta un objeto que la jugadora no lleve ya (doc 07 §12.1).

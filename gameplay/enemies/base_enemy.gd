@@ -88,8 +88,15 @@ func _drop() -> void:
 func _spawn_pickup(pickup_kind: String, at: Vector2) -> void:
 	var pk := preload("res://gameplay/pickups/pickup.tscn").instantiate()
 	pk.kind = pickup_kind
-	get_parent().add_child(pk)
-	pk.global_position = at
+	# El botín nace dentro del impacto que mata al enemigo, justo cuando Godot
+	# está cerrando las consultas de física y no admite un área nueva. Encolarlo
+	# evita el error y deja el botín igual, un instante después.
+	var parent := get_parent()
+	if not is_instance_valid(parent):
+		pk.queue_free()
+		return
+	parent.add_child.call_deferred(pk)
+	pk.set_deferred("global_position", at)
 
 func _try_touch_player() -> void:
 	var p := get_tree().get_first_node_in_group("player") as Node2D

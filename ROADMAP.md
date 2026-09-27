@@ -67,8 +67,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Taller con pool exclusiva, 2 ofertas expuestas en la sala, llave para la tercera y reparación (D-004).
 - [x] El overlay de pausa es un espejo del estado real: ya no se queda visible mientras la partida corre.
 - [x] Compra directa en el suelo del taller, sin paneles, sin objetos gratis en las salas y sin límite de huecos (D-005).
-- [ ] Flujo completo con recompensas, elección, riesgo, taller y jefe.
-- [ ] Caja de Cero con dos fases funcionales y contraestrategias.
+- [x] Flujo completo con recompensas, elección, riesgo, taller y jefe.
+- [x] Caja de Cero con dos fases funcionales y contraestrategias (aviso visible y contraataque).
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.
 - [ ] Audio provisional, arte modular provisional y feedback audiovisual.
 - [ ] Tutorial contextual, accesibilidad básica y controles de consumible.

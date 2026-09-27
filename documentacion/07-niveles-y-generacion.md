@@ -230,6 +230,19 @@ Reglas de la compra:
 - Una estrategia válida con el ataque inicial.
 - No depender de un consumible guardado por error.
 
+### 14.1 La Caja de Cero
+
+La Caja de Cero (120 de vida, 6 de presupuesto) tiene **dos fases** y un **contraataque** legible:
+
+- **Fase 1 (100 %–50 %):** abanico de 5 cortes dirigidos a la jugadora, cada 1,6 s.
+- **Fase 2 (por debajo del 50 %):** el mismo abanico más una lluvia de 3 cortes hacia abajo, cada 1,2 s. El cambio se anuncia con un destello y tiñe la caja de rojo.
+- **Aviso previo:** antes de cada ráfaga la caja se queda quieta 0,6 s y la **llave central** crece y se enciende. Ese es el aviso: donde hay aviso, hay contraataque.
+- **Contraataque:** golpear la caja mientras avisa **cancela la ráfaga**, deja 1,4 s de calma y hace el daño ×1,5. Fuera del aviso el daño es el normal.
+- La **llave central** es su debilidad declarada (`content/enemies.json`): mientras está encendida, el jefe está abierto.
+- Al morir suelta siempre un objeto del catálogo (`boss_drop` de la semilla), distinto del arma inicial y fuera de la pool del taller.
+
+El timings son valores de prueba, no balance final: revisar en el playtest H3.
+
 ## 15. Acto I — La Sala de las Cajas
 
 Objetivos:

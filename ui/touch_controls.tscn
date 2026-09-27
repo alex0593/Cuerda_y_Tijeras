@@ -22,11 +22,11 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -80.0
-offset_top = -80.0
-offset_right = 80.0
-offset_bottom = 80.0
-color = Color(0, 0, 0, 0.15)
+offset_left = -62.0
+offset_top = -62.0
+offset_right = 62.0
+offset_bottom = 62.0
+color = Color(0, 0, 0, 0.08)
 
 [node name="Knob" type="ColorRect" parent="Left"]
 mouse_filter = 2
@@ -35,11 +35,11 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -30.0
-offset_right = 30.0
-offset_bottom = 30.0
-color = Color(0, 0, 0, 0.3)
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = 24.0
+color = Color(0, 0, 0, 0.18)
 
 [node name="Right" type="Control" parent="."]
 mouse_filter = 2
@@ -60,11 +60,11 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -80.0
-offset_top = -80.0
-offset_right = 80.0
-offset_bottom = 80.0
-color = Color(0, 0, 0, 0.15)
+offset_left = -62.0
+offset_top = -62.0
+offset_right = 62.0
+offset_bottom = 62.0
+color = Color(0, 0, 0, 0.08)
 
 [node name="Knob" type="ColorRect" parent="Right"]
 mouse_filter = 2
@@ -73,11 +73,11 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -30.0
-offset_right = 30.0
-offset_bottom = 30.0
-color = Color(0, 0, 0, 0.3)
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = 24.0
+color = Color(0, 0, 0, 0.18)
 
 [node name="Dash" type="Button" parent="Right"]
 mouse_filter = 2

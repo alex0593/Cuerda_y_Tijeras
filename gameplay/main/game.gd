@@ -125,7 +125,10 @@ func _spawn_player() -> void:
 	add_child(player)
 	move_child(player, 0)
 	var start: RoomScript = rooms.get(START_CELL)
-	player.global_position = start.global_position + Vector2(140.0 * k.x, 270.0 * k.y)
+	# En el centro de la sala, no en la esquina: las esquinas de la pantalla las
+	# cubren los joysticks táctiles, y aparecer debajo de uno hace que la jugadora
+	# no se vea durante los primeros segundos.
+	player.global_position = start.global_position + Vector2(480.0 * k.x, 270.0 * k.y)
 
 # Entrar en una sala la despierta la primera vez y deja a la jugadora dentro.
 func _enter_room(cell: Vector2i, from_direction: String) -> void:

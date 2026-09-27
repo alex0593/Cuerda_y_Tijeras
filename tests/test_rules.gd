@@ -52,6 +52,34 @@ func _run() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_service.RUN_PATH))
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_service.RUN_PATH + ".bak"))
 
+	# Disparo automático: tiene que apuntar al enemigo, no en la dirección del
+	# movimiento. Con la opción puesta, moverse en huida no puede hacer que el
+	# tiro salga de espaldas.
+	var player = load("res://gameplay/player/lela.tscn").instantiate()
+	root.add_child(player)
+	await process_frame
+	player.set_physics_process(false)
+	var dummy = load("res://gameplay/enemies/tin_soldier.tscn").instantiate()
+	root.add_child(dummy)
+	await process_frame
+	dummy.set_physics_process(false)
+	dummy.global_position = player.global_position + Vector2(200, 0)
+	save_service.settings["auto_fire"] = true
+	player.velocity = Vector2(-220.0, 0.0)  # Huyendo del enemigo: justo el caso roto.
+	player.call("_update_aim")
+	_check(player.aim_dir.dot(Vector2.RIGHT) > 0.9,
+		"con disparo automático la puntería debe ir al enemigo, no al movimiento")
+	save_service.settings["auto_fire"] = false
+	dummy.global_position = player.global_position + Vector2(4000, 0)
+	player.call("_update_aim")
+	_check(player.aim_dir.dot(Vector2.LEFT) > 0.9,
+		"sin disparo automático se sigue apuntando al movimiento")
+	save_service.settings.erase("auto_fire")
+	if is_instance_valid(dummy):
+		dummy.free()
+	if is_instance_valid(player):
+		player.free()
+
 	state.end_run(false)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 999

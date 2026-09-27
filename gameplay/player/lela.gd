@@ -128,6 +128,13 @@ func _update_aim() -> void:
 	var ta := _touch_aim()
 	if ta != Vector2.ZERO:
 		aim_dir = ta
+	elif SaveService.settings.get("auto_fire", false):
+		# Con disparo automático hay que apuntar al enemigo más cercano. Sin esto
+		# se dispara en la dirección del movimiento, que es justo hacia donde se
+		# aleja la jugadora: el tiro sale de espaldas.
+		var target := _nearest_enemy_dir()
+		if target != Vector2.ZERO:
+			aim_dir = target
 	else:
 		var m := get_global_mouse_position() - global_position
 		if Input.is_action_pressed("fire") and m.length() > 4.0:

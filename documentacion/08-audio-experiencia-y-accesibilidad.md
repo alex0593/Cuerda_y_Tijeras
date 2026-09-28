@@ -66,7 +66,9 @@ Reglas:
 - Joystick derecho en la zona inferior derecha.
 - Botón de dash cerca del pulgar derecho, sin bloquear el joystick.
 - Botón de rebobinado más arriba, con área amplia.
-- Consumible en la parte inferior central o derecha, según el tamaño de pantalla.
+- Consumible en la parte inferior central o derecha, según el tamaño de pantalla. En el
+  vertical slice está en el hueco entre el centro y el joystick derecho, para no solapar
+  con ninguna palanca ni tapar a la jugadora, que la cámara mantiene siempre en el centro.
 - Pausa lejos de los controles de juego.
 
 El diseño debe funcionar con una mano si la jugadora elige esa opción. No es obligatorio ofrecer una mano única, pero sí evitar que todos los controles estén en el borde.

@@ -78,7 +78,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Caja de Cero con dos fases funcionales y contraestrategias (aviso visible y contraataque).
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.
 - [ ] Audio provisional, arte modular provisional y feedback audiovisual.
-- [ ] Tutorial contextual, accesibilidad básica y controles de consumible.
+- [x] Botón de consumible en táctil: solo aparece si llevas uno, muestra las cargas y se apaga con la vida llena.
+- [ ] Tutorial contextual y accesibilidad básica.
 
 ## H4 — Calidad y publicación
 

@@ -142,8 +142,36 @@ Cuerda_y_Tijeras/
 ├── platform-web/         # Web
 ├── assets/               # Arte, audio, animaciones y tipografías
 ├── tests/                # Pruebas de reglas y contenido
-└── tools/                # Exportación, validación y utilidades
+└── tools/                # Validación, medición y utilidades
 ```
+
+### 5.1 Herramientas de medición
+
+En `tools/` hay dos arneses que **no son tests**: generan informes para decidir el balance con
+números en lugar de con playtests. No pasan ni fallan; informan.
+
+```sh
+# Forma del mapa, economía, botín y alcanzabilidad del catálogo.
+#   --seeds N agrega sobre N semillas; --seed N vuelca una partida sala a sala.
+godot --headless --script tools/measure_run.gd --path . -- --seeds 200
+
+# Partidas jugadas por un bot en la escena real. --max acota el tope por partida.
+godot --headless --script tools/measure_play.gd --path . -- --runs 8
+```
+
+`measure_run.gd` replica el RNG de botín de `base_enemy._drop()` con la misma semilla y el mismo
+orden de aparición que usa la sala, así que los totales son exactos y no estimaciones. Además
+replica el RNG del generador: con la misma semilla el mapa es idéntico.
+
+`measure_play.gd` monta `game.tscn` y pulsa las mismas acciones que un dedo, sin llamar a nada
+interno de la jugadora. **Tiene un sesgo declarado y hay que leerlo antes que los números: el
+bot no esquiva, no usa el rebobinado para salvar una situación y no elige rutas. Es un jugador
+competente, no uno bueno.** Si sobrevive, el juego es más fácil de lo que parece; si muere, no
+demuestra que sea demasiado difícil. Sus números van siempre juntos con una partida que juega una
+persona.
+
+Cuando se cambie un número de balance, la comprobación es: medir, ajustar, volver a medir. Ningún
+ajuste se da por bueno solo porque el test siga en verde.
 
 Esta estructura es conceptual. Al seleccionar Godot no es obligatorio crear un proyecto Gradle por cada carpeta: puede mapearse con directorios, escenas, recursos y servicios globales.
 

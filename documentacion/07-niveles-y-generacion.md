@@ -257,11 +257,43 @@ Los Hilos son la moneda de la partida y se gastan **solo** en el taller. Todo el
 
 Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**; forzar la tienda sin alfiler cuesta **6 hilos**.
 
+El **consumible no lo suelta el jefe**: se compra en el taller, como el resto. Ganar no puede
+consistir en recoger una bobina de reparación. La pool del jefe excluye el arma inicial, la pool
+del taller y los consumibles; `validate_room()` lo denuncia y `validate_content.py` comprueba que
+todo objeto del catálogo tenga alguna fuente.
+
+### 12.2 Lo que dice la medición (200 semillas, sin ajustar nada)
+
+Medido con `tools/measure_run.gd`. **Estos números no son un ajuste**: son el estado actual, y
+sirven para decidir. La partida completa da 9–20 hilos (media 14,2) y 0–4 alfileres (media 1,1),
+con 13 enemigos y drops del 15 % de hilo y 10 % de alfiler.
+
+El problema no es el total, es **cuándo** se puede gastar:
+
+| Cuándo | Hilos disponibles | Nota |
+| --- | --- | --- |
+| Al terminar el mapa entero | 9–20 (media 14,2) | 2,1 objetos de media |
+| Al llegar a 3 salas de profundidad | 3–10 (media 6,0) | el taller cae aquí en el 16 % |
+| Al llegar a 4 salas de profundidad | 4–12 (media 8,0) | el taller cae aquí en el 22 % |
+
+El taller se sortea a **dos pasos o más de la entrada** (§2), así que lo normal es llegar con
+media 6–8 hilos. La entrada cuesta 6 y el objeto más barato 5: **la tienda abre justo y no
+queda para comprar nada**. La media de 2,1 objetos solo se consigue limpiando el mapa entero
+antes de comprar, que es justo lo contrario de lo que induce la colocación del taller.
+
+Consecuencia medida en la alcanzabilidad: el inventario medio de una partida es de **2,7
+objetos con el arma inicial** (1,7 ganados) y **0,3 sinergias**. Los objetos de 8 hilos son casi
+inalcanzables y ninguna sinergia pasa del 9 %. Las sinergias son el corazón del diseño (doc 05) y a
+este ritmo no ocurren.
+
+**Nada de esto está ajustado todavía.** Es un hallazgo para decidir, y la decisión va con su
+registro propio.
+
 ## 13. Tienda del taller
 
 El taller es una sala única y es **la única tienda** de la partida. No hay paneles ni ventanas: la compra es directa en el suelo (D-005).
 
-- **Pool exclusiva** (`shop_pool` en `content/economy.json`): `scissors_precision`, `music_box`, `glass_eye`, `iron_magnet` y `toy_glue`. Ninguno de ellos cae gratis en ninguna sala ni en el botín del jefe: solo se compran aquí.
+- **Pool exclusiva** (`shop_pool` en `content/economy.json`): `scissors_precision`, `music_box`, `glass_eye`, `iron_magnet`, `toy_glue` y `repair_coil`. Ninguno de ellos cae gratis en ninguna sala ni en el botín del jefe: solo se compran aquí.
 - **Dos ofertas.** Cada partida sortea `shop.offers` (2) objetos de esa pool con la semilla. Se exponen en el mostrador con su nombre y su precio en hilos.
 - **Sin repetir lo que ya llevas.** Al entrar en la sala se retiran de las ofertas los objetos que ya tienes y se repone con la semilla de la sala, así que siempre hay 2 opciones nuevas que coger.
 - **La cerradura es un nudo.** El mostrador está cerrado con un nudo que se **corta con un tiro**: el mismo mecanismo de disparo que usan todas las salas. No hace falta ningún artículo para pasar.

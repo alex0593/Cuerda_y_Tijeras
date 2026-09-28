@@ -33,6 +33,13 @@ var threads := 0
 var alfilers := 0
 # La tienda del taller está abierta en esta partida.
 var shop_open := false
+# Estado del mapa por sala, para poder retomar una partida a medias (doc 09 §10).
+# Clave "x,y" de la celda; valor {cleared: bool, loot_taken: Array[int]}. Sin esto,
+# «Continuar» reiniciaría el mapa en blanco y el guardado sería una mentira.
+var map_state: Dictionary = {}
+# Al reanudar una partida guardada, el estado del mapa tiene que sobrevivir a
+# start_run(), que lo limpia. Quien va a continuar lo pone a true antes.
+var resuming := false
 var items: Array[String] = ["scissors_basic"]
 var item_charges: Dictionary = {}
 var inventory: Dictionary = {}
@@ -82,6 +89,7 @@ func start_run(p_seed: int = 0) -> void:
 	threads = 0
 	alfilers = 0
 	shop_open = false
+	map_state.clear()
 	items = ["scissors_basic"]
 	item_charges.clear()
 	_rebuild_inventory()
@@ -378,6 +386,7 @@ func restore_run(data: Dictionary) -> void:
 	threads = maxi(0, int(data.get("threads", 0)))
 	alfilers = maxi(0, int(data.get("alfilers", 0)))
 	shop_open = bool(data.get("shop_open", false))
+	map_state = _clean_map_state(data.get("map_state", {}))
 	items = ["scissors_basic"]
 	var saved_items: Array = data.get("items", [])
 	for item_id in saved_items:
@@ -397,6 +406,36 @@ func restore_run(data: Dictionary) -> void:
 		if not SynergyDB.get_synergy(sid).is_empty() and not (sid in synergies):
 			synergies.append(sid)
 	cause_of_death = String(data.get("cause_of_death", ""))
+
+# El estado del mapa viene de un archivo: se filtra lo que no tenga forma de sala
+# antes de dejarlo cerca, para no arrastrar basura al juego.
+func _clean_map_state(raw) -> Dictionary:
+	var out := {}
+	if not (raw is Dictionary):
+		return out
+	for key in (raw as Dictionary).keys():
+		var cell := String(key)
+		var parts := cell.split(",")
+		if parts.size() != 2:
+			continue
+		if not (parts[0].is_valid_int() and parts[1].is_valid_int()):
+			continue
+		var entry = (raw as Dictionary)[key]
+		if not (entry is Dictionary):
+			continue
+		var taken: Array[int] = []
+		for index in ((entry as Dictionary).get("loot_taken", []) as Array):
+			if index is int and int(index) >= 0:
+				taken.append(int(index))
+		out[cell] = {"cleared": bool((entry as Dictionary).get("cleared", false)), "loot_taken": taken}
+	return out
+
+# Anota una sala en el estado del mapa. Lo llama el mapa al entrar en cada sala.
+func note_room(cell: Vector2i, cleared: bool, loot_taken: Array) -> void:
+	map_state["%d,%d" % [cell.x, cell.y]] = {"cleared": cleared, "loot_taken": loot_taken.duplicate()}
+
+func room_state(cell: Vector2i) -> Dictionary:
+	return map_state.get("%d,%d" % [cell.x, cell.y], {})
 	tension_changed.emit(tension)
 	life_changed.emit(life)
 	rewind_charges_changed.emit(rewind_charges)

@@ -44,6 +44,13 @@ var door_areas: Dictionary = {}
 var door_bodies: Dictionary = {}
 var door_labels: Dictionary = {}
 var rng := RandomNumberGenerator.new()
+# Estado recuperado del guardado: la sala se reconstruye sin enemigos si ya
+# estaba despejada, y sin el botín que ya se recogió (doc 09 §10).
+var saved_cleared := false
+var saved_loot_taken: Array[int] = []
+# Los botines que esta sala ha puesto en el suelo, para saber cuáles siguen
+# ahí: un botín recogido es un nodo liberado.
+var loot_nodes: Array = []
 var _ready_done := false
 
 func setup(room: Dictionary) -> void:
@@ -78,8 +85,22 @@ func activate() -> void:
 	if is_active:
 		return
 	is_active = true
-	_spawn_enemies()
 	activated.emit()
+	# Una sala que ya estaba despejada al guardar vuelve despejada y sin
+	# enemigos: si no, al continuar aparecían de nuevo los que ya mataste.
+	if saved_cleared:
+		_mark_cleared()
+		return
+	_spawn_enemies()
+
+# Estado de la sala para el guardado: qué se ha limpiado y qué botín queda.
+func snapshot() -> Dictionary:
+	var taken: Array = []
+	for i in loot_nodes.size():
+		var node = loot_nodes[i]
+		if not is_instance_valid(node) or node.is_queued_for_deletion():
+			taken.append(i)
+	return {"cleared": is_cleared, "loot_taken": taken}
 
 func _process(_delta: float) -> void:
 	if not is_active or is_cleared or not GameState.is_running:

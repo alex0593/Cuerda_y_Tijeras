@@ -5,7 +5,7 @@ extends Node
 const PROFILE_PATH := "user://profile.v1.json"
 const SETTINGS_PATH := "user://settings.v1.json"
 const RUN_PATH := "user://partida-a.v1.json"
-const FORMAT_VERSION := 2
+const FORMAT_VERSION := 3
 
 var settings := {
 	"music_volume": 0.8, "sfx_volume": 0.9, "assist_aim": false,
@@ -72,6 +72,7 @@ func save_run() -> bool:
 		"threads": GameState.threads,
 		"alfilers": GameState.alfilers,
 		"shop_open": GameState.shop_open,
+		"map_state": GameState.map_state,
 		"run_time": GameState.run_time,
 		"cause_of_death": GameState.cause_of_death,
 	}
@@ -100,6 +101,13 @@ func load_run() -> bool:
 func has_run() -> bool:
 	return FileAccess.file_exists(RUN_PATH)
 
+# La partida se acaba: el guardado se borra para que «Continuar» no ofrezca
+# volver a una partida terminada. Se borra también la copia de seguridad.
+func clear_run() -> void:
+	for path in [RUN_PATH, RUN_PATH + ".bak"]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
 func _read_run_file(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
@@ -115,6 +123,9 @@ func _valid_run_data(data: Dictionary) -> bool:
 		and data.get("items", []) is Array
 		and data.get("item_charges", {}) is Dictionary
 		and data.get("synergies", []) is Array
+		# Desde la v3 el estado del mapa es obligatorio: sin él «Continuar» dejaría
+		# el mapa en blanco, que es peor que no ofrecer continuar.
+		and data.get("map_state", {}) is Dictionary
 	)
 
 func _try_restore_backup() -> bool:

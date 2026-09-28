@@ -53,18 +53,61 @@ func _ready() -> void:
 	# para poder cerrar la pausa o reintentar desde el resumen.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameState.run_ended.connect(_on_run_ended)
-	_start_new_run(randi())
+	# Si el menú dejó una partida cargada para continuar, manda su semilla; si no,
+	# es una partida nueva. Sin esto, entrar en la escena siempre tiraba la
+	# partida guardada y empezaba una al azar, que es lo contrario de «Continuar».
+	if GameState.resuming:
+		_start_new_run(GameState.seed_value)
+	else:
+		_start_new_run(randi())
 
 func _start_new_run(p_seed: int) -> void:
 	_run_serial += 1
 	get_tree().paused = false
 	_transitioning = false
+	# Al continuar, el estado del mapa viene del guardado y start_run() lo limpia:
+	# se aparta y se vuelve a poner cuando el mapa ya está construido.
+	var resume_state: Dictionary = {}
+	if GameState.resuming:
+		resume_state = (GameState.map_state as Dictionary).duplicate(true)
+	GameState.resuming = false
 	GameState.start_run(p_seed)
 	flow = RoomGenerator.generate_run(p_seed)
 	_clear_map()
 	_build_map()
+	if not resume_state.is_empty():
+		GameState.map_state = resume_state
+		_restore_map_state()
 	_spawn_player()
-	_enter_room(START_CELL, "")
+	if not resume_state.is_empty():
+		# La jugadora vuelve a la sala en la que estaba, no a la entrada: si no,
+		# «Continuar» la teletransportaba al principio del mapa.
+		_enter_room(_resume_cell(), "")
+	else:
+		_enter_room(START_CELL, "")
+
+# La celda donde estaba la jugadora al guardarse. Se deduce del estado del mapa:
+# la última sala visitada que aún tenía enemigos es la más avanzada, y si no
+# queda ninguna, la última visitada.
+func _resume_cell() -> Vector2i:
+	var visited: Array[Vector2i] = []
+	for key in GameState.map_state.keys():
+		var parts := String(key).split(",")
+		if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+			visited.append(Vector2i(int(parts[0]), int(parts[1])))
+	if visited.is_empty():
+		return START_CELL
+	visited.sort_custom(func(a, b): return _manhattan(a, START_CELL) > _manhattan(b, START_CELL))
+	var start: Vector2i = START_CELL
+	for cell in visited:
+		var entry: Dictionary = GameState.room_state(cell)
+		if not bool(entry.get("cleared", false)):
+			start = cell
+			break
+	return start
+
+func _manhattan(a: Vector2i, b: Vector2i) -> int:
+	return absi(a.x - b.x) + absi(a.y - b.y)
 
 func _clear_map() -> void:
 	rooms.clear()
@@ -104,6 +147,33 @@ func _build_map() -> void:
 		add_child(room)
 		rooms[room.grid_cell] = room
 	GameState.rooms_total = rooms.size()
+	_restore_map_state()
+
+# Vuelca en cada sala lo que el guardado dice de ella. Se hace al construir el
+# mapa, antes de que la jugadora entre en ninguna, para que una sala ya
+# despejada no vuelva a tener enemigos.
+func _restore_map_state() -> void:
+	for cell in rooms:
+		var room: RoomScript = rooms[cell]
+		var saved: Dictionary = GameState.room_state(cell)
+		room.saved_cleared = bool(saved.get("cleared", false))
+		var taken: Array[int] = []
+		for index in (saved.get("loot_taken", []) as Array):
+			taken.append(int(index))
+		room.saved_loot_taken = taken
+
+# El estado del mapa se guarda al entrar en cada sala y al pausar, nunca a mitad
+# de un combate: así «Continuar» siempre devuelve a la jugadora al empezar de
+# una sala, con lo que tenía y lo que había dejado sin recoger.
+func _save_progress() -> void:
+	if not GameState.is_running:
+		return
+	for cell in rooms:
+		var room: RoomScript = rooms[cell]
+		if not room.is_active:
+			continue
+		GameState.note_room(cell, room.is_cleared, room.snapshot().get("loot_taken", []))
+	SaveService.save_run()
 
 # Encuadre de la cámara. La sala es más grande que el viewport, así que la
 # cámara puede centrarla; el encuadre se calcula para que la jugadora se vea con
@@ -171,6 +241,7 @@ func _wake_room(room: RoomScript) -> void:
 		return
 	room.activate()
 	_populate_room(room)
+	_save_progress()
 
 # Botín y tienda se montan al despertar la sala, con lo que la jugadora lleve
 # en ese momento: la pool nunca repite un objeto ya recogido.
@@ -183,6 +254,9 @@ func _populate_room(room: RoomScript) -> void:
 
 func _drop_loot(room: RoomScript, loot: Array) -> void:
 	for i in mini(loot.size(), LOOT_SLOTS.size()):
+		# El botín que ya se recogió antes del guardado no vuelve a aparecer.
+		if i in (room.saved_loot_taken as Array):
+			continue
 		_drop_reward(room, LOOT_SLOTS[i], String(loot[i]))
 
 func _drop_reward(room: RoomScript, pos: Vector2, kind: String) -> void:
@@ -190,6 +264,7 @@ func _drop_reward(room: RoomScript, pos: Vector2, kind: String) -> void:
 	pk.kind = kind
 	room.add_child(pk)
 	pk.position = pos
+	room.loot_nodes.append(pk)
 
 # --- Tienda del taller -------------------------------------------------------
 
@@ -288,6 +363,8 @@ func _process(_delta: float) -> void:
 			_start_new_run(randi())
 		elif Input.is_action_just_pressed("pause") and not ($End as CanvasLayer).visible:
 			get_tree().paused = not get_tree().paused
+			if get_tree().paused:
+				_save_progress()
 	# El overlay es un espejo del estado real, nunca una variable aparte: si se
 	# asigna a mano puede quedarse visible mientras la partida corre, o tapar
 	# un panel. Ni con panel abierto ni con el resumen encima.
@@ -306,6 +383,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not get_tree().paused:
 		get_tree().paused = true
 		$PauseOverlay.visible = true
+		_save_progress()
 
 func _is_back_pressed(event: InputEvent) -> bool:
 	if event.is_action_pressed("ui_cancel"):
@@ -315,6 +393,9 @@ func _is_back_pressed(event: InputEvent) -> bool:
 func _on_run_ended(victory: bool) -> void:
 	get_tree().paused = true
 	$PauseOverlay.visible = false
+	# La partida se acabó: el guardado se borra, o «Continuar» ofrecería volver a
+	# una partida que ya no existe.
+	SaveService.clear_run()
 	SaveService.profile.runs = int(SaveService.profile.get("runs", 0)) + 1
 	if victory:
 		var best := float(SaveService.profile.get("best_time", 0.0))

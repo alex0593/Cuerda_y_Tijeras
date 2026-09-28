@@ -36,14 +36,16 @@ Es la escena principal del proyecto: el juego arranca aquí, no en la partida.
 
 ### Resumen de partida
 
-- Duración.
-- Habitaciones visitadas.
-- Objetos obtenidos.
-- Sinergias descubiertas.
-- Enemigos derrotados.
-- Causa de muerte.
+- Duración, habitaciones visitadas y enemigos derrotados, en una línea.
+- Objetos obtenidos, por su nombre de catálogo y no por su identificador.
+- Sinergias formadas, por su nombre.
+- Causa de muerte, contada en palabras: un identificador en el resumen no dice nada.
+  Solo aparece si hubo derrota.
 - Semilla.
-- Nueva partida.
+- Botones de Reintentar y de Menú, propios del resumen.
+
+Los objetos y las sinergias que se han visto pasan al perfil, que es lo que hay detrás de la
+colección y de las sinergias descubiertas entre partidas.
 
 ## 3. HUD
 

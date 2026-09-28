@@ -35,6 +35,12 @@ func _run() -> void:
 	var touch = get_first_node_in_group("touch") as CanvasLayer
 	if touch != null:
 		touch.visible = true
+	if room_kind == "summary":
+		await _show_summary(scene)
+		_report(scene)
+		_save(image_from_viewport(), out)
+		quit(0)
+		return
 	match room_kind:
 		"combat", "item":
 			_enter_active_room(scene)
@@ -44,6 +50,21 @@ func _run() -> void:
 	_report(scene)
 	_save(image_from_viewport(), out)
 	quit(0)
+
+# Muestra el resumen de una partida perdida, que es la pantalla que más ha
+# cambiado deayout y conviene ver sin tener que morir en el móvil.
+func _show_summary(scene: Node) -> void:
+	var state = root.get_node_or_null("GameState")
+	state.set("life", 1.0)
+	state.set("threads", 9)
+	state.add_item("scissors_precision")
+	state.add_item("spring_jumper")
+	state.set("cause_of_death", "caja_cero")
+	state.set("rooms_visited", 5)
+	state.set("kills", 6)
+	state.set("run_time", 128.0)
+	scene.call("_on_run_ended", false)
+	await create_timer(0.3).timeout
 
 # Despierta la primera sala con contenido, la activa y deja dentro a la jugadora.
 func _enter_active_room(scene: Node) -> void:

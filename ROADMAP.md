@@ -26,6 +26,7 @@ $GODOT --headless --script tools/validate_content.gd --path .
 python3 tools/validate_content.py
 $GODOT --headless --script tests/test_h3_save.gd --path .
 $GODOT --headless --script tests/test_h3_menu.gd --path .
+$GODOT --headless --script tests/test_h3_summary.gd --path .
 
 # Medición de balance (informes, no tests). Ver doc 09 §5.1.
 $GODOT --headless --script tools/measure_run.gd --path . -- --seeds 200
@@ -81,7 +82,7 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Menú principal con Continuar, Nueva partida y vuelta al menú desde la pausa.
 - [x] Guardado del estado del mapa (v3): al continuar vuelven las salas despejadas, el botín
       sin recoger y la sala en la que se estaba, no un mapa en blanco.
-- [ ] Resumen con objetos obtenidos, sinergías descubiertas y causa de muerte.
+- [x] Resumen con objetos obtenidos, sinergías formadas y causa de muerte, con sus propios botones.
 - [ ] Audio provisional, arte modular provisional y feedback audiovisual.
 - [x] Botón de consumible en táctil: solo aparece si llevas uno, muestra las cargas y se apaga con la vida llena.
 - [ ] Tutorial contextual y accesibilidad básica.

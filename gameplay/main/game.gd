@@ -414,12 +414,104 @@ func _on_run_ended(victory: bool) -> void:
 	if victory:
 		var best := float(SaveService.profile.get("best_time", 0.0))
 		SaveService.profile.best_time = GameState.run_time if best <= 0.0 else minf(best, GameState.run_time)
+	# Lo que se vio en esta partida pasa al perfil, que es lo que hay detrás de la
+	# colección y de las sinergias descubiertas.
+	_remember_discovery()
 	SaveService.save_profile()
-	var label := $End/Label as Label
+	_fill_summary(victory)
 	($End as CanvasLayer).visible = true
+
+# El resumen tiene que decir qué pasó, no solo cuánto duró (doc 08 §2).
+func _fill_summary(victory: bool) -> void:
+	var box := $End/Box
 	var mins := int(GameState.run_time) / 60
 	var secs := int(GameState.run_time) % 60
-	label.text = "%s\nTiempo %02d:%02d  Salas %d/%d  Bajas %d\nSemilla %s\n[R] reintentar" % [
-		"¡Función completa!" if victory else "La función no ha terminado",
-		mins, secs, GameState.rooms_visited, maxi(GameState.rooms_total, 1), GameState.kills,
-		SaveService.export_seed()]
+	var title := box.get_node("Title") as Label
+	title.text = "¡Has vencido a la Caja de Cero!" if victory else "La función no ha terminado"
+	var stats := box.get_node("Stats") as Label
+	stats.text = "Tiempo %02d:%02d  ·  Salas %d/%d  ·  Bajas %d" % [
+		mins, secs, GameState.rooms_visited, maxi(GameState.rooms_total, 1), GameState.kills
+	]
+	var objects := _object_names()
+	var objects_label := box.get_node("Objects") as Label
+	objects_label.visible = not objects.is_empty()
+	objects_label.text = ("Objetos: %s" % ", ".join(objects)) if not objects.is_empty() else ""
+	var synergies := _synergy_names(GameState.synergies)
+	var synergies_label := box.get_node("Synergies") as Label
+	synergies_label.visible = not synergies.is_empty()
+	synergies_label.text = ("Sinergias: %s" % ", ".join(synergies)) if not synergies.is_empty() else ""
+	# La causa de muerte solo si la hubo: en victoria no hay nada que decir.
+	var cause := _cause_text()
+	var cause_label := box.get_node("Cause") as Label
+	cause_label.visible = not victory and cause != ""
+	cause_label.text = ("Causa: %s" % cause) if not victory and cause != "" else ""
+	var seed_label := box.get_node("Seed") as Label
+	seed_label.text = "Semilla %s" % SaveService.export_seed()
+	# El resumen tiene sus propios botones: los del HUD quedan debajo de esta
+	# capa, y en móvil sin ellos no había manera de seguir jugando.
+	var retry := box.get_node("Buttons/Retry") as Button
+	var menu := box.get_node("Buttons/Menu") as Button
+	if not retry.pressed.is_connected(_on_retry_from_summary):
+		retry.pressed.connect(_on_retry_from_summary)
+		menu.pressed.connect(_on_end_to_menu)
+
+func _on_retry_from_summary() -> void:
+	($End as CanvasLayer).visible = false
+	_start_new_run(randi())
+
+# Los objetos y sinergias que se han visto en la partida, por su nombre de catálogo.
+func _object_names() -> PackedStringArray:
+	var names := PackedStringArray()
+	for item_id in GameState.items:
+		var id := String(item_id)
+		if id == "scissors_basic":
+			continue
+		names.append(String(SynergyDB.get_item(id).get("name", id)))
+	return names
+
+func _synergy_names(ids: Array) -> PackedStringArray:
+	var names := PackedStringArray()
+	for synergy_id in ids:
+		names.append(String(SynergyDB.get_synergy(String(synergy_id)).get("name", synergy_id)))
+	return names
+
+# La causa viene como identificador ("caja_cero", "enemy_shot", "cut") y hay que
+# contarla en palabras: un identificador en el resumen no dice nada.
+func _cause_text() -> String:
+	var source := String(GameState.cause_of_death)
+	if source == "":
+		return ""
+	if source == "enemy_shot":
+		return "un disparo enemigo"
+	if source == "cut":
+		return "un corte propio"
+	if source == "glue":
+		return "tu pegamento"
+	if source == "note":
+		return "una nota atrapada"
+	var enemy := SynergyDB.get_enemy(source)
+	if not enemy.is_empty():
+		return String(enemy.get("name", source))
+	return source
+
+# El perfil guarda lo descubierto entre partidas: lo que se lleva y las
+# sinergias que se han formado. Es lo que después alimentará la colección.
+func _remember_discovery() -> void:
+	var unlocked: Array = SaveService.profile.get("unlocked_items", ["scissors_basic"])
+	var seen: Array = SaveService.profile.get("seen_synergies", [])
+	for item_id in GameState.items:
+		var id := String(item_id)
+		if not (id in unlocked):
+			unlocked.append(id)
+	for synergy_id in GameState.synergies:
+		var sid := String(synergy_id)
+		if not (sid in seen):
+			seen.append(sid)
+	SaveService.profile.unlocked_items = unlocked
+	SaveService.profile.seen_synergies = seen
+
+# Desde el resumen la partida ya está guardada como terminada, así que solo
+# cambia de escena: no hay nada que guardar.
+func _on_end_to_menu() -> void:
+	GameState.resuming = false
+	get_tree().call_deferred("change_scene_to_file", "res://gameplay/main/title.tscn")

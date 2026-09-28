@@ -8,12 +8,17 @@ La partida debe ser clara en una pantalla pequeña y funcionar sin obligar a lee
 
 ### Menú principal
 
-- Continuar.
-- Nueva partida.
-- Colección.
-- Opciones.
-- Créditos.
-- Salir o volver, según la plataforma.
+Es la escena principal del proyecto: el juego arranca aquí, no en la partida.
+
+- **Continuar.** Apagado si no hay partida guardada. Con ella, muestra la semilla, los hilos y
+  los objetos que llevaba. Al pulsarlo, la partida vuelve **exactamente** donde estaba: misma
+  semilla, mismo mapa, misma sala, mismo botín sin recoger (doc 09 §10).
+- **Nueva partida.** Borra lo que hubiera guardado: si no, «Continuar» ofrecería un mapa que ya
+  no tiene nada que ver con esta partida.
+- **Volver al menú.** Solo aparece si había una partida en marcha. Sale desde la pausa y deja la
+  partida guardada.
+- Pendiente: Colección, Opciones y Créditos. No hay contenido detrás todavía, así que no se
+  muestran botones vacíos.
 
 ### Preparación de partida
 

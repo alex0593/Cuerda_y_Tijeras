@@ -97,7 +97,7 @@ Cada plantilla define:
 
 Algoritmo del vertical slice (`core/room_generator.gd`, `GENERATOR_VERSION = 7`):
 
-1. Crear la rejilla 3x3 de celdas; cada celda es una sala de 960x540.
+1. Crear la rejilla 3x3 de celdas; cada celda es una sala de **1728x972** (§5.2).
 2. Fijar el inicio en la esquina (0,0) y el jefe en la opuesta (2,2).
 3. Barajar con la semilla las celdas libres y colocar el taller en la primera que esté a dos
    pasos o más de la entrada.
@@ -122,6 +122,37 @@ No se debe construir una habitación generada sin comprobar que la jugadora tien
 - El contenido de una sala (enemigos, hilos, taller) se monta la **primera vez que se entra**,
   con lo que la jugadora lleve en ese momento, para que la pool nunca repita lo ya recogido.
 - La jugadora es **una sola** en todo el mapa y la cámara la sigue.
+- La jugadora **aparece en el centro de la sala de inicio**: las esquinas de la pantalla las
+  cubren los joysticks táctiles, y aparecer debajo de uno hace que no se vea.
+- La jugadora se dibuja **por encima del suelo** de la sala (`PLAYER_Z` en `game.gd`). Como es
+  hija del mapa y no de la sala, el orden de hermanos la coloca la última, pero el z_index lo
+  deja a salvo de que alguien reordene el árbol.
+
+### 5.2 Tamaño de sala y encuadre de cámara
+
+La sala mide **1728x972** y su interior está diseñado en 960x540: el nodo de la sala lleva un
+escalado de 1,8, así que una sala más grande no obliga a rehacer la colocación de muros,
+cobertura, puertas, botín y taller.
+
+**Regla: la sala tiene que ser más grande que el viewport en los dos ejes.** Si no, la cámara no
+tiene margen y los límites del mapa empujan a la jugadora hasta el borde de la pantalla en
+cuanto se acerca a un muro. Con el flujo lineal de una sola sala no se notaba; al abrir el mapa
+salió enseguida.
+
+El viewport no es el que parece. Con `window/stretch/aspect = "expand"` Godot **conserva el alto**
+(540) y ensancha el ancho, así que en un móvil panorámico de 2412x1080 el viewport es
+**1206x540**, no 960x430. Cualquier cálculo de encuadre tiene que hacerse sobre
+`get_viewport_rect().size` en tiempo de ejecución, nunca de la proporción del diseño.
+
+El zoom se calcula en `_fit_camera()` a partir del viewport real, con un tope de 1,0 para no
+alejarse más de la cuenta. Se acerca lo justo para que la jugadora ocupe alrededor del **5 % del
+alto de la pantalla**: si la sala y el viewport casi coinciden, la jugadora aparece con media
+pantalla de tamaño.
+
+Los enemigos **no** se escalan con la sala (`scale = 1/SCALE`): si crecieran, el combate
+cambiaría sin tocar el balance. La jugadora tampoco crece, por el mismo motivo; lo que sube es
+su velocidad, de 220 a 260, para que cruzar una sala un 80 % más grande no alargue la partida
+(4,4 s en vez de 7,9 s por sala).
 
 ## 6. Presupuesto de dificultad
 

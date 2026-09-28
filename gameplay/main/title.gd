@@ -28,7 +28,10 @@ func pause_btn_from_game() -> void:
 	GameState.resuming = false
 
 func _refresh() -> void:
-	var has_save: bool = SaveService.has_run()
+	# can_continue() y no has_run(): un guardado de una versión que este juego no
+	# entiende no se puede continuar, y ofrecer el botón sería engañar.
+	var summary: Dictionary = SaveService.run_summary()
+	var has_save: bool = not summary.is_empty()
 	continue_btn.disabled = not has_save
 	# Un botón apagado que no se distingue de uno activo es un botón que alguien
 	# toca a ciegas. El tema por defecto apenas cambia el color.
@@ -39,16 +42,17 @@ func _refresh() -> void:
 	seed_label.visible = has_save
 	if has_save:
 		seed_label.text = "Semilla %s  ·  %d hilos  ·  %d alfileres" % [
-			SaveService.export_seed(), GameState.threads, GameState.alfilers
+			String(summary.get("seed", "")), int(summary.get("threads", 0)),
+			int(summary.get("alfilers", 0))
 		]
-	var names := _item_names()
+	var names := _item_names(summary.get("items", []) as Array)
 	hint_label.visible = not names.is_empty()
 	if not names.is_empty():
 		hint_label.text = "Objetos: %s" % ", ".join(names)
 
-func _item_names() -> PackedStringArray:
+func _item_names(owned: Array = []) -> PackedStringArray:
 	var names := PackedStringArray()
-	for item_id in GameState.items:
+	for item_id in owned:
 		var id := String(item_id)
 		if id == "scissors_basic":
 			continue
@@ -67,6 +71,9 @@ func _on_new() -> void:
 # escena del juego la reanude en vez de empezar una nueva.
 func _on_continue() -> void:
 	if not SaveService.load_run():
+		# O no había nada o el guardado no se entiende. Un guardado que no se puede
+		# cargar se aparta, para no volver a ofrecer un botón que no hace nada.
+		SaveService.clear_run()
 		_refresh()
 		return
 	GameState.resuming = true

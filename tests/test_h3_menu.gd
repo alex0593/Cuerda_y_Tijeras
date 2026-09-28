@@ -33,6 +33,33 @@ func _run() -> void:
 	_check(continue_btn.disabled, "sin partida guardada, «Continuar» tiene que estar apagado")
 	_check(not new_btn.disabled, "«Nueva partida» siempre se puede tocar")
 
+	# --- 1b. Un guardado de otra versión no se puede continuar y no se ofrece.
+	#        Pasó en el móvil: había un guardado viejo y el botón aparecía activo.
+	save_service.call("clear_run")
+	# Con la ruta absoluta: user:// puede no resolver igual desde un --script.
+	var stale := FileAccess.open(ProjectSettings.globalize_path("user://partida-a.v1.json"), FileAccess.WRITE)
+	if stale != null:
+		stale.store_string(JSON.stringify({
+			"version": 1, "seed": 12345, "generator_version": 4, "tension": 90.0,
+			"life": 2.0, "rewind_charges": 1, "items": ["scissors_basic"],
+			"item_charges": {}, "synergies": [], "rooms_visited": 3, "kills": 2,
+			"threads": 7, "alfilers": 0, "shop_open": false, "run_time": 40.0,
+			"cause_of_death": "",
+		}))
+		stale.close()
+	_check(save_service.has_run(), "el archivo viejo está en disco")
+	_check(not save_service.can_continue(), "un guardado de otra versión no se puede continuar")
+	_check(save_service.run_summary().is_empty(), "y el menú no tiene nada que enseñar de él")
+	await _goto("res://gameplay/main/title.tscn")
+	_check((current_scene.get_node("Center/Buttons/Continue") as Button).disabled,
+		"con un guardado viejo, «Continuar» tiene que estar apagado")
+	save_service.call("clear_run")
+	# Se vuelve al menú limpio: los botones de antes pertenecen a una escena ya
+	# liberada, así que hay que volver a cogerlos.
+	await _goto("res://gameplay/main/title.tscn")
+	continue_btn = current_scene.get_node("Center/Buttons/Continue") as Button
+	new_btn = current_scene.get_node("Center/Buttons/New") as Button
+
 	# --- 2. «Nueva partida» entra en la partida con semilla nueva.
 	new_btn.emit_signal("pressed")
 	await _settle()
@@ -64,8 +91,13 @@ func _run() -> void:
 	_check(_is_script(current_scene, "title.gd"), "el botón del menú tiene que llevar al menú")
 	_check(save_service.has_run(), "volver al menú tiene que dejar la partida guardada")
 	_check(not paused, "el menú tiene que quitar la pausa al entrar")
-	_check(bool(current_scene.get_node("Center/Buttons/Continue").disabled) == false,
-		"con partida guardada, «Continuar» tiene que estar disponible")
+	var continue_now := current_scene.get_node("Center/Buttons/Continue") as Button
+	_check(not continue_now.disabled, "con partida guardada, «Continuar» tiene que estar disponible")
+	# El menú enseña lo que hay guardado, leyéndolo del archivo: al abrir el menú
+	# no hay partida en memoria y sin esto salía siempre el 0 de partida nueva.
+	var seed_text := (current_scene.get_node("Center/Seed") as Label).text
+	_check(seed_text.contains("11 hilos"), "el menú tiene que enseñar los hilos guardados: %s" % seed_text)
+	_check(not seed_text.contains("Semilla 0"), "no puede enseñar la semilla de partida nueva: %s" % seed_text)
 
 	# --- 4. «Continuar» devuelve la partida donde estaba.
 	current_scene.get_node("Center/Buttons/Continue").emit_signal("pressed")

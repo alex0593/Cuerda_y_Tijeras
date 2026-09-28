@@ -101,6 +101,32 @@ func load_run() -> bool:
 func has_run() -> bool:
 	return FileAccess.file_exists(RUN_PATH)
 
+# Hay algo que continuar solo si el archivo existe **y** es de una versión que
+# este juego entiende. Un guardado de una versión anterior no vale: al continuar
+# sin estado de mapa dejaría el mapa en blanco, que es peor que no ofrecer nada.
+func can_continue() -> bool:
+	if not has_run():
+		return false
+	return _valid_run_data(_read_run_file(RUN_PATH)) or _valid_run_data(_read_run_file(RUN_PATH + ".bak"))
+
+# Lo que el menú enseña sin continuar: semilla, hilos, alfileres y objetos.
+# Lee el archivo, no el estado en memoria, porque al abrir el menú no hay partida
+# cargada y sin esto se enseñaría siempre el 0 de partida nueva.
+func run_summary() -> Dictionary:
+	var data: Dictionary = {}
+	if _valid_run_data(_read_run_file(RUN_PATH)):
+		data = _read_run_file(RUN_PATH)
+	elif _valid_run_data(_read_run_file(RUN_PATH + ".bak")):
+		data = _read_run_file(RUN_PATH + ".bak")
+	if data.is_empty():
+		return {}
+	return {
+		"seed": "%d-v%d" % [int(data.get("seed", 0)), int(data.get("generator_version", 0))],
+		"threads": int(data.get("threads", 0)),
+		"alfilers": int(data.get("alfilers", 0)),
+		"items": (data.get("items", []) as Array).duplicate(),
+	}
+
 # La partida se acaba: el guardado se borra para que «Continuar» no ofrezca
 # volver a una partida terminada. Se borra también la copia de seguridad.
 func clear_run() -> void:

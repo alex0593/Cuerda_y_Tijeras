@@ -164,6 +164,23 @@ func _run() -> void:
 			await physics_frame
 		_check(int(state.threads) > threads_before, "la jugadora debe recoger el hilo del suelo")
 
+	# 7b. El contacto tiene que hacer daño. Con la física manteniendo a 28 px y un
+	#     umbral de 26, el contacto no se disparaba nunca y contra soldados la
+	#     jugadora era invencible. Solo se vio jugando en el móvil.
+	var biter = load("res://gameplay/enemies/tin_soldier.tscn").instantiate()
+	root.add_child(biter)
+	await process_frame
+	biter.set("drop_rng_seed", 7)
+	biter.global_position = player.global_position + Vector2(18, 0)
+	var life_before: float = float(state.life)
+	for i in 30:
+		await physics_frame
+	_check(float(state.life) < life_before,
+		"un enemigo encima tiene que hacer daño: la vida sigue en %.1f" % float(state.life))
+	_check(int(state.kills) >= 0, "el contacto no debe romper nada más")
+	if is_instance_valid(biter):
+		biter.free()
+
 	# 8. Escudo: frontal reduce el daño y trasero lo rompe.
 	var soldier = load("res://gameplay/enemies/tin_soldier.tscn").instantiate()
 	soldier.set("drop_rng_seed", 123)

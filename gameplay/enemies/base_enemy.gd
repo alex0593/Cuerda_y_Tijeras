@@ -102,7 +102,14 @@ func _spawn_pickup(pickup_kind: String, at: Vector2) -> void:
 	pk.set_deferred("global_position", at)
 
 func _try_touch_player() -> void:
+	# El contacto se decide con la propia física y no con una distancia. Con un
+	# radio de 14 en los dos, la física los mantiene a 28 px: un umbral de 26
+	# no llegaba nunca a dispararse y ningún enemigo hacía daño por contacto, solo
+	# por proyectil. Se vio jugando: contra soldados, la jugadora era invencible.
 	var p := get_tree().get_first_node_in_group("player") as Node2D
-	if p and global_position.distance_to(p.global_position) < 26.0:
-		if p.has_method("take_hit"):
+	if p == null or not p.has_method("take_hit"):
+		return
+	for i in get_slide_collision_count():
+		if get_slide_collision(i).get_collider() == p:
 			p.take_hit(touch_damage, enemy_id)
+			return

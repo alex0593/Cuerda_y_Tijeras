@@ -18,6 +18,7 @@ const MAX_DRAG := 90.0
 @onready var right_knob: Control = $Right/Knob
 @onready var dash_btn: Button = $Right/Dash
 @onready var rewind_btn: Button = $Right/Rewind
+@onready var use_item_btn: Button = $UseItem
 @onready var pause_btn: Button = $Pause
 @onready var restart_btn: Button = $Restart
 var _left_home := Vector2.ZERO
@@ -34,12 +35,25 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	restart_btn.visible = visible and not GameState.is_running
+	_refresh_use_item()
+
+# El botón de consumible solo existe si llevas uno, y se apaga con la vida llena:
+# un botón que no hace nada es peor que no tenerlo (doc 08 §3).
+func _refresh_use_item() -> void:
+	var charges := GameState.get_slot_charges("consumable")
+	use_item_btn.visible = visible and charges > 0
+	if not use_item_btn.visible:
+		return
+	use_item_btn.text = "Usar x%d" % charges
+	use_item_btn.disabled = GameState.life >= GameState.LIFE_MAX
 
 func _ui_action_at(pos: Vector2) -> String:
 	if dash_btn.get_global_rect().grow(12.0).has_point(pos):
 		return "dash"
 	if rewind_btn.get_global_rect().grow(12.0).has_point(pos):
 		return "rewind"
+	if use_item_btn.visible and not use_item_btn.disabled and use_item_btn.get_global_rect().grow(12.0).has_point(pos):
+		return "use_item"
 	if pause_btn.get_global_rect().grow(12.0).has_point(pos):
 		return "pause"
 	if restart_btn.visible and restart_btn.get_global_rect().grow(12.0).has_point(pos):

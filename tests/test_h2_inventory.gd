@@ -47,6 +47,30 @@ func _run() -> void:
 	state.life = state.LIFE_MAX
 	_check(not state.add_item("repair_coil"), "la restricción full_life debe bloquear el uso")
 
+	# El consumible tiene que ser usable de verdad, con el botón táctil y sin
+	# clavar el objeto en el código: se recorre el hueco, no se busca por id.
+	var player = load("res://gameplay/player/lela.tscn").instantiate()
+	root.add_child(player)
+	await process_frame
+	player.set_physics_process(false)
+	state.life = 1.0
+	_check(state.add_item("repair_coil"), "con vida baja la bobina debe poder comprarse")
+	_check(int(state.get_slot_charges("consumable")) == 1, "una compra son una carga")
+	player.call("_try_use_consumable")
+	_check(is_equal_approx(state.life, 2.0), "usar el consumible tiene que curar un segmento")
+	_check(int(state.get_slot_charges("consumable")) == 0, "usarlo debe gastar la carga")
+	_check(not (state.items as Array).has("repair_coil"), "al gastar la última carga debe desaparecer")
+	player.call("_try_use_consumable")
+	_check(is_equal_approx(state.life, 2.0), "sin consumible no debe curar")
+	# Con la vida llena no hace nada: ni cura ni gasta carga. Primero se compra,
+	# porque con la vida llena la bobina ni siquiera se puede añadir.
+	_check(state.add_item("repair_coil"), "la bobina debe poder volver a comprarse")
+	state.life = state.LIFE_MAX
+	player.call("_try_use_consumable")
+	_check(int(state.get_slot_charges("consumable")) == 1, "con la vida llena no debe gastar carga")
+	if is_instance_valid(player):
+		player.free()
+
 	var impulse: Array = db.check_for_item(["scissors_precision"], "spring_jumper")
 	_check(impulse.has("impulse_scissors"), "tijeras + resorte deben formar tijeras de impulso")
 	var stitches: Array = db.check_for_item(["scissors_precision"], "taut_thread")

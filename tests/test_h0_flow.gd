@@ -41,6 +41,14 @@ func _run() -> void:
 		_check(int(state.rooms_visited) == 2, "deben contar dos salas visitadas")
 		_check(scene.current_cell == neighbour.grid_cell, "la jugadora debe estar en la sala vecina")
 
+	# Reiniciar tiene que reconstruir el mapa sin quejarse: el mapa se construye
+	# otra vez y la cámara vuelve a engancharse al cambio de tamaño de pantalla.
+	scene.call("_start_new_run", 13579)
+	await process_frame
+	await physics_frame
+	_check((scene.rooms as Dictionary).size() == 9, "tras reiniciar debe haber 9 salas otra vez")
+	_check((get_nodes_in_group("player") as Array).size() == 1, "reiniciar no puede duplicar a la jugadora")
+
 	if is_instance_valid(scene):
 		scene.free()
 	for i in 10:

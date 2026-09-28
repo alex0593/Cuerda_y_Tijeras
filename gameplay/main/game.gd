@@ -88,7 +88,13 @@ func _build_map() -> void:
 	camera.limit_right = int(room_size.x * grid.x)
 	camera.limit_bottom = int(room_size.y * grid.y)
 	_fit_camera(room_size)
-	get_viewport().size_changed.connect(_fit_camera.bind(room_size))
+	# El mapa se vuelve a construir en cada reinicio, así que la conexión al
+	# cambio de tamaño hay que renovarla: conectar dos veces la misma señal
+	# avisa por consola cada vez que se reintenta.
+	var on_resize := _fit_camera.bind(room_size)
+	if get_viewport().size_changed.is_connected(on_resize):
+		get_viewport().size_changed.disconnect(on_resize)
+	get_viewport().size_changed.connect(on_resize)
 	for data in (flow["rooms"] as Array):
 		var room: RoomScript = preload("res://gameplay/rooms/room.tscn").instantiate()
 		room.process_mode = Node.PROCESS_MODE_PAUSABLE

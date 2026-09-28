@@ -224,12 +224,22 @@ func _do_rewind_step(delta: float) -> void:
 		move_and_slide()
 
 func _try_use_consumable() -> void:
-	if "repair_coil" in GameState.items and GameState.life < GameState.LIFE_MAX:
-		GameState.heal(1.0)
-		GameState.consume_item("repair_coil")
+	if GameState.life >= GameState.LIFE_MAX:
+		return
+	# Se recorre el hueco de consumibles en vez de clavar un objeto: así el
+	# botón sirve con cualquier consumible que se añada al catálogo, y no solo
+	# con la bobina de reparación.
+	for item_id in GameState.get_slot_items("consumable"):
+		var id := String(item_id)
+		var effect := String(SynergyDB.get_item(id).get("effect", ""))
+		if effect != "heal_segment":
+			continue
+		GameState.heal(float(SynergyDB.get_item(id).get("heal", 1.0)))
+		GameState.consume_item(id)
 		# Sinergia resorte+bobina: parte de tensión en dash (doc 05).
 		if "spring_jumper" in GameState.items:
 			_dash_cd = 0.0
+		return
 
 func take_hit(amount: float, source: String) -> void:
 	GameState.apply_damage(amount, source)

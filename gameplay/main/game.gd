@@ -107,11 +107,15 @@ func _build_map() -> void:
 
 # Encuadre de la cámara. La sala es más grande que el viewport, así que la
 # cámara puede centrarla; el encuadre se calcula para que la jugadora se vea con
-# tamaño y para que sobre sitio en los dos ejes. Sin esto, en un móvil
-# panorámico (stretch=expand deja el viewport en 960x430) la jugadora acababa
-# pegada al borde de la pantalla al acercarse a un muro.
+# tamaño y para que sobre sitio en los dos ejes. Sin margen, en un móvil la
+# jugadora acababa pegada al borde de la pantalla al acercarse a un muro.
 #   1.0 = se ve la sala entera; mayor que 1 = más cerca.
 const CAMERA_FILL := 0.72
+# Diez por ciento más lejos de la jugadora, a petición del playtest del 28-09:
+# con el encuadre anterior se leía demasiado justa en el móvil. Se aplica como
+# un factor sobre el zoom ya calculado, así que da igual la proporción de
+# pantalla: el alejamiento es siempre el mismo.
+const CAMERA_DISTANCE := 0.9
 
 func _fit_camera(room_size: Vector2) -> void:
 	var view: Vector2 = get_viewport_rect().size
@@ -123,7 +127,7 @@ func _fit_camera(room_size: Vector2) -> void:
 	# 1.0 evita alejarse más de la cuenta en pantallas cuadradas.
 	var zoom_x: float = view.x / (room_size.x * CAMERA_FILL)
 	var zoom_y: float = view.y / (room_size.y * CAMERA_FILL)
-	var zoom: float = minf(minf(zoom_x, zoom_y), 1.0)
+	var zoom: float = minf(minf(zoom_x, zoom_y), 1.0) * CAMERA_DISTANCE
 	camera.zoom = Vector2(zoom, zoom)
 
 func _spawn_player() -> void:

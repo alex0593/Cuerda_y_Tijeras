@@ -76,6 +76,8 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Compra directa en el suelo del taller, sin paneles, sin objetos gratis en las salas y sin límite de huecos (D-005).
 - [~] Mapa navegable de 9 salas en rejilla 3x3: puertas entre vecinas, estado que se conserva y victoria al recoger el botín del jefe (D-006). Implementado y verificado en tests y escritorio; **pendiente del playtest en hardware**, que es lo que exige la regla de avance.
 - [x] Arneses de medición headless (`tools/measure_run.gd`, `tools/measure_play.gd`) para decidir el balance con números.
+- [x] Economía del mapa ajustada con la medición: se puede comprar en el taller al llegar, no solo abrirlo (D-008).
+- [ ] Que las sinergias ocurran más: es un tope estructural, no de precios (ver D-008).
 - [x] Encuadre de cámara en móvil panorámico: sala mayor que el viewport y zoom calculado en tiempo de ejecución (doc 07 §5.2).
 - [x] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [x] Caja de Cero con dos fases funcionales y contraestrategias (aviso visible y contraataque).

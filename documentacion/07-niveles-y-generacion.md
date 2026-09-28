@@ -245,49 +245,52 @@ Los Hilos son la moneda de la partida y se gastan **solo** en el taller. Todo el
   | Sala | Hilos |
   | --- | --- |
   | start | 0 |
-  | combat | 1–2 |
-  | treasure | 1–2 |
-  | risk | 2–3 |
-  | workshop | 1–2 |
+  | combat | 2–3 |
+  | treasure | 2–3 |
+  | risk | 3–4 |
+  | workshop | 2–3 |
   | boss | 0 |
 
 - **Ningún objeto gratis.** Las salas ya no regalan objetos: solo dejan hilos. Los objetos salen de **dos sitios** (D-005): el **suelo del jefe** y la **tienda del taller**.
 - **Botín de jefe.** La Caja de Cero **siempre** suelta un objeto al morir, distinto del arma inicial, generado como `boss_drop` en la semilla y fuera de la pool del taller: lo especial se compra y lo común lo regala el jefe. **Recoger ese objeto cierra la partida con victoria**; el resumen sale entonces mismo.
 - **Alfileres.** Recurso que cae de los enemigos y se gasta para abrir la tienda del taller (§13).
 
-Los precios son por rareza, no por objeto: **común 5, especial 8, rara 12**. La reparación cuesta **6 hilos** y cura **1,0 segmento**; forzar la tienda sin alfiler cuesta **6 hilos**.
+Los precios son por rareza, no por objeto: **común 4, especial 8, rara 12**. La reparación cuesta **5 hilos** y cura **1,0 segmento**; forzar la tienda sin alfiler cuesta **4 hilos**. Los de especial y rara no se bajaron a propósito: los objetos raros tienen que seguir siendo raros para que comprar sea una decisión (D-008).
 
 El **consumible no lo suelta el jefe**: se compra en el taller, como el resto. Ganar no puede
 consistir en recoger una bobina de reparación. La pool del jefe excluye el arma inicial, la pool
 del taller y los consumibles; `validate_room()` lo denuncia y `validate_content.py` comprueba que
 todo objeto del catálogo tenga alguna fuente.
 
-### 12.2 Lo que dice la medición (200 semillas, sin ajustar nada)
+### 12.2 Lo que dice la medición (200 semillas)
 
-Medido con `tools/measure_run.gd`. **Estos números no son un ajuste**: son el estado actual, y
-sirven para decidir. La partida completa da 9–20 hilos (media 14,2) y 0–4 alfileres (media 1,1),
-con 13 enemigos y drops del 15 % de hilo y 10 % de alfiler.
+Medido con `tools/measure_run.gd`. Los valores de `content/economy.json` **no** están puestos a ojo:
+salen de este arnés, y con los que había antes (botín 1–2 por sala, entrada 6, común 5) se
+midieron y se ajustaron (D-008).
 
-El problema no es el total, es **cuándo** se puede gastar:
+**La cifra que decide si el taller sirve de algo no es la de la partida entera, sino la del
+momento en que se llega al taller**, que está a dos pasos de la entrada:
 
-| Cuándo | Hilos disponibles | Nota |
+| Al llegar al taller por primera vez | Antes | Ahora |
 | --- | --- | --- |
-| Al terminar el mapa entero | 9–20 (media 14,2) | 2,1 objetos de media |
-| Al llegar a 3 salas de profundidad | 3–10 (media 6,0) | el taller cae aquí en el 16 % |
-| Al llegar a 4 salas de profundidad | 4–12 (media 8,0) | el taller cae aquí en el 22 % |
+| hilos que llevas | 2–17 (media 8,4) | 4–23 (media 12,5) |
+| puede abrirlo | 84 % | **100 %** |
+| puede comprar 1 objeto | 53 % | **85 %** |
+| puede comprar 2 objetos | 18 % | **49 %** |
 
-El taller se sortea a **dos pasos o más de la entrada** (§2), así que lo normal es llegar con
-media 6–8 hilos. La entrada cuesta 6 y el objeto más barato 5: **la tienda abre justo y no
-queda para comprar nada**. La media de 2,1 objetos solo se consigue limpiando el mapa entero
-antes de comprar, que es justo lo contrario de lo que induce la colocación del taller.
+Con el mapa entero limpio se compran 3,3 objetos de media y se forman **0,5 sinergias**.
 
-Consecuencia medida en la alcanzabilidad: el inventario medio de una partida es de **2,7
-objetos con el arma inicial** (1,7 ganados) y **0,3 sinergias**. Los objetos de 8 hilos son casi
-inalcanzables y ninguna sinergia pasa del 9 %. Las sinergias son el corazón del diseño (doc 05) y a
-este ritmo no ocurren.
+> Una versión anterior de este apartado afirmaba que «la tienda abre justo y no queda para comprar
+> nada». Era una lectura equivocada, hecha con la curva de profundidad en vez de con la cifra
+> directa. El arnés mide ahora las dos cosas por separado, precisamente para que no se confuse
+> el total de la partida con lo que se puede gastar cuando toca.
 
-**Nada de esto está ajustado todavía.** Es un hallazgo para decidir, y la decisión va con su
-registro propio.
+**Lo que la medición deja claro y no se ha tocado:** las sinergias no son un problema de precios.
+Con cinco combinaciones de precios probadas (`tools/sweep_economy.py`), la media de sinergias se
+queda entre 0,4 y 0,5 por partida y no sube de ahí. Las seis sinergias reales necesitan **un objeto
+del taller más uno del jefe**, y el jefe suelta exactamente uno: ese es el techo. Subirlo es una
+decisión de diseño (que el jefe suelte dos, o que alguna sinergia se forme con dos objetos del
+taller), no un número. Está en D-008.
 
 ## 13. Tienda del taller
 

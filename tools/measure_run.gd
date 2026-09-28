@@ -163,6 +163,50 @@ func _measure_economy(seeds: int) -> void:
 	print("  leer: si 'objetos comprables' es 0 casi siempre, la tienda es decorativa;")
 	print("  si nunca llega a 2, la segunda compra es inalcanzable por diseño.")
 	_report_depth_curve(seeds)
+	_report_shop_reach(seeds)
+
+# La cifra que decide si el taller sirve de algo: no lo que entra en toda la
+# partida, sino si al LLEGAR a él por primera vez se puede comprar. El taller
+# está a dos pasos de la entrada, así que la jugadora llega con poco.
+func _report_shop_reach(seeds: int) -> void:
+	var can_open := 0
+	var can_buy := 0
+	var can_buy_two := 0
+	var threads_at_shop := []
+	for i in seeds:
+		var run: Dictionary = _gen.generate_run(i)
+		var shop_room := _workshop_room(run)
+		var threads := _threads_before(run, shop_room)
+		var pins := _pins_before(run, shop_room)
+		threads_at_shop.append(threads)
+		var left := threads
+		if pins > 0:
+			pins -= 1
+		else:
+			left -= int(_syn.get_entry_cost())
+		if left >= 0:
+			can_open += 1
+		var owned: Array[String] = ["scissors_basic"]
+		var prices: Array[int] = []
+		for item_id in _gen.shop_offers_for(shop_room, owned):
+			prices.append(int(_syn.get_price(String(item_id))))
+		prices.sort()
+		var bought := 0
+		for price in prices:
+			if left < price:
+				break
+			left -= price
+			bought += 1
+		if bought > 0:
+			can_buy += 1
+		if bought > 1:
+			can_buy_two += 1
+	print("  -- al llegar al taller por primera vez --")
+	print("  hilos que llevas: %s" % _range_text(threads_at_shop))
+	print("  puede abrirlo: %.0f%% de las partidas" % _share(can_open, seeds))
+	print("  puede comprar 1 objeto: %.0f%% de las partidas" % _share(can_buy, seeds))
+	print("  puede comprar 2 objetos: %.0f%% de las partidas" % _share(can_buy_two, seeds))
+	print("  objetivo: abrir por encima del 90% y comprar uno por encima del 50%.")
 
 # El total de la partida no es la cifra que decide si la tienda funciona: lo que
 # importa es cuánto hay cuando la jugadora llega al taller. Se acumulan las salas

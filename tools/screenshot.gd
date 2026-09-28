@@ -19,10 +19,16 @@ func _run() -> void:
 	var out := String(args.get("out", "user://screenshot.png"))
 	var run_seed := int(args.get("seed", 4242))
 	var room_kind := String(args.get("room", "start"))
-
-	var scene = load("res://gameplay/main/game.tscn").instantiate()
+	# --scene title abre el menú en vez de la partida, para verlo sin jugar.
+	var scene = load(String(args.get("scene", "res://gameplay/main/game.tscn"))).instantiate()
 	root.add_child(scene)
 	await process_frame
+	if scene.get("rooms") == null:
+		await create_timer(0.4).timeout
+		_report(scene)
+		_save(image_from_viewport(), out)
+		quit(0)
+		return
 	scene.call("_start_new_run", run_seed)
 	for i in 45:
 		await process_frame
@@ -36,17 +42,7 @@ func _run() -> void:
 				_prepare_item(scene)
 	await create_timer(0.4).timeout
 	_report(scene)
-	var image: Image = root.get_texture().get_image()
-	if image == null:
-		push_error("sin textura: hace falta un display, no headless")
-		quit(1)
-		return
-	var err := image.save_png(out)
-	if err != OK:
-		push_error("no se pudo guardar en %s (código %d)" % [out, err])
-		quit(1)
-		return
-	print("captura guardada en ", ProjectSettings.globalize_path(out))
+	_save(image_from_viewport(), out)
 	quit(0)
 
 # Despierta la primera sala con contenido, la activa y deja dentro a la jugadora.
@@ -73,6 +69,8 @@ func _prepare_item(scene: Node) -> void:
 
 # Los números del encuadre: si esto cambia, el encuadre ha cambiado.
 func _report(scene: Node) -> void:
+	if scene.get("camera") == null:
+		return  # el menú no tiene cámara: no hay encuadre que informar
 	var cam = scene.get("camera")
 	var view: Vector2 = scene.get_viewport_rect().size
 	var room_size: Vector2 = scene.flow.get("room_size", Vector2.ZERO)
@@ -86,10 +84,23 @@ func _report(scene: Node) -> void:
 	print("jugadora=%s en_pantalla=%s de %s" % [str(player.global_position.round()), str(on_screen.round()), str(view.round())])
 	print("la jugadora ocupa el %.1f%% del alto de la pantalla" % (36.0 * cam.zoom.y / view.y * 100.0))
 	var touch = get_first_node_in_group("touch") as CanvasLayer
-	if touch != null:
+	if touch != null and touch.get("visible"):
 		var btn = touch.get_node_or_null("UseItem") as Button
 		if btn != null:
 			print("boton de consumible: visible=%s texto=%s deshabilitado=%s" % [btn.visible, btn.text, btn.disabled])
+
+func image_from_viewport() -> Image:
+	return root.get_texture().get_image()
+
+func _save(image: Image, out: String) -> void:
+	if image == null:
+		push_error("sin textura: hace falta un display, no headless")
+		return
+	var err := image.save_png(out)
+	if err != OK:
+		push_error("no se pudo guardar en %s (código %d)" % [out, err])
+		return
+	print("captura guardada en ", ProjectSettings.globalize_path(out))
 
 func _args() -> Dictionary:
 	var out := {}

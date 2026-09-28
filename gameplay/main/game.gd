@@ -53,6 +53,7 @@ func _ready() -> void:
 	# para poder cerrar la pausa o reintentar desde el resumen.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameState.run_ended.connect(_on_run_ended)
+	($PauseOverlay/MenuBtn as Button).pressed.connect(_on_back_to_menu)
 	# Si el menú dejó una partida cargada para continuar, manda su semilla; si no,
 	# es una partida nueva. Sin esto, entrar en la escena siempre tiraba la
 	# partida guardada y empezaba una al azar, que es lo contrario de «Continuar».
@@ -65,21 +66,22 @@ func _start_new_run(p_seed: int) -> void:
 	_run_serial += 1
 	get_tree().paused = false
 	_transitioning = false
-	# Al continuar, el estado del mapa viene del guardado y start_run() lo limpia:
-	# se aparta y se vuelve a poner cuando el mapa ya está construido.
-	var resume_state: Dictionary = {}
-	if GameState.resuming:
-		resume_state = (GameState.map_state as Dictionary).duplicate(true)
+	# Al continuar NO se llama a start_run(): el estado acaba de restaurarse del
+	# guardado y start_run() lo dejaría a cero (vida, tensión, objetos e hilos).
+	# Solo hay que reconstruir el mapa con la misma semilla y devolverle a la
+	# jugadora la sala en la que estaba.
+	var resuming: bool = GameState.resuming
 	GameState.resuming = false
-	GameState.start_run(p_seed)
+	var resume_state: Dictionary = (GameState.map_state as Dictionary).duplicate(true) if resuming else {}
+	if not resuming:
+		GameState.start_run(p_seed)
 	flow = RoomGenerator.generate_run(p_seed)
 	_clear_map()
 	_build_map()
-	if not resume_state.is_empty():
-		GameState.map_state = resume_state
-		_restore_map_state()
+	GameState.map_state = resume_state
+	_restore_map_state()
 	_spawn_player()
-	if not resume_state.is_empty():
+	if resuming:
 		# La jugadora vuelve a la sala en la que estaba, no a la entrada: si no,
 		# «Continuar» la teletransportaba al principio del mapa.
 		_enter_room(_resume_cell(), "")
@@ -384,6 +386,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().paused = true
 		$PauseOverlay.visible = true
 		_save_progress()
+
+# Volver al menú deja la partida guardada, así que «Continuar» la recoge tal
+# cual. Antes de irnos se guarda, que si no se perdería lo hecho desde la última
+# sala.
+func _on_back_to_menu() -> void:
+	if not GameState.is_running:
+		return
+	_save_progress()
+	GameState.resuming = false
+	# Aplazado: el botón vive en la escena que se va a liberar, y cambiar de
+	# escena desde dentro de su propio señal deja el nodo colgando.
+	get_tree().call_deferred("change_scene_to_file", "res://gameplay/main/title.tscn")
 
 func _is_back_pressed(event: InputEvent) -> bool:
 	if event.is_action_pressed("ui_cancel"):

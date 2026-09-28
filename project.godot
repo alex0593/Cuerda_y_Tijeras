@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Cuerda y Tijeras"
 config/description="Roguelite 2D cenital: Lela, tension y rebobinado. Vertical slice 5-10 min."
-run/main_scene="res://gameplay/main/game.tscn"
+run/main_scene="res://gameplay/main/title.tscn"
 config/icon="res://icon.svg"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0.93, 0.88, 0.78, 1)

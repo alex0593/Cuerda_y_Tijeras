@@ -2,8 +2,12 @@
 
 - **ID:** D-004
 - **Fecha:** 2026-09-26
-- **Estado:** provisional
+- **Estado:** sustituida por D-005 (2026-09-26)
 - **Área:** diseño / balance
+
+> **Sustituida.** D-005 («compra directa en el suelo») reemplaza el panel de ofertas y el uso de
+> la llave, que aquí no llegaron a funcionar en hardware. Se conserva porque explica por qué el
+> taller dejó de ser un panel.
 
 ## Problema
 Al jugárselo en el Honor durante el playtest H3, la tienda no se leía como tienda: era una cajita marrón con un rótulo «tocar para entrar» en la esquina de la sala, un NPC con otra forma. Vendía el catálogo entero, así que no había motivo para guardar hilos ni para distinguir qué se compra aquí y qué se recoge gratis. Por otro lado las llaves caían de los enemigos y no se gastaban en ningún sitio.

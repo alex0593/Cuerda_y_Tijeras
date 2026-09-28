@@ -25,6 +25,10 @@ $GODOT --headless --script tests/test_h0_flow.gd --path .
 $GODOT --headless --script tools/validate_content.gd --path .
 python3 tools/validate_content.py
 
+# Medición de balance (informes, no tests). Ver doc 09 §5.1.
+$GODOT --headless --script tools/measure_run.gd --path . -- --seeds 200
+$GODOT --headless --script tools/measure_play.gd --path . -- --runs 8
+
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export JAVA_HOME="$HOME/.local/share/minecrack/runtimes/java-21"
@@ -67,7 +71,9 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 - [x] Taller con pool exclusiva, 2 ofertas expuestas en la sala, llave para la tercera y reparación (D-004).
 - [x] El overlay de pausa es un espejo del estado real: ya no se queda visible mientras la partida corre.
 - [x] Compra directa en el suelo del taller, sin paneles, sin objetos gratis en las salas y sin límite de huecos (D-005).
-- [x] Mapa navegable de 9 salas en rejilla 3x3: puertas entre vecinas, estado que se conserva y victoria al recoger el botín del jefe (D-006).
+- [~] Mapa navegable de 9 salas en rejilla 3x3: puertas entre vecinas, estado que se conserva y victoria al recoger el botín del jefe (D-006). Implementado y verificado en tests y escritorio; **pendiente del playtest en hardware**, que es lo que exige la regla de avance.
+- [x] Arneses de medición headless (`tools/measure_run.gd`, `tools/measure_play.gd`) para decidir el balance con números.
+- [x] Encuadre de cámara en móvil panorámico: sala mayor que el viewport y zoom calculado en tiempo de ejecución (doc 07 §5.2).
 - [x] Flujo completo con recompensas, elección, riesgo, taller y jefe.
 - [x] Caja de Cero con dos fases funcionales y contraestrategias (aviso visible y contraataque).
 - [ ] Inicio, resumen, derrota, victoria, pausa y guardado/carga conectados.
@@ -83,4 +89,4 @@ $GODOT --headless --export-debug "Android" exports/cuerda-y-tijeras-debug.apk --
 
 ## Regla de avance
 
-No marcar una fase como completada por tener escenas o datos: hace falta que sus pruebas automatizadas y el playtest de hardware correspondiente pasen. El diseño completo está en `documentacion/`; el estado ejecutable se demuestra con los tests y exports de este roadmap.
+No marcar una fase como completada por tener escenas o datos: hace falta que sus pruebas automatizadas y el playtest de hardware correspondiente pasen. `[~]` marca lo que está implementado y verificado en tests pero sin el playtest que le toca. El diseño completo está en `documentacion/`; el estado ejecutable se demuestra con los tests y exports de este roadmap.
